@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Creator - LocateMapper</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            flex: 1;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 60px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007cba;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #005a8b;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #map {
+            height: 400px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .instructions {
+            background-color: #e7f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007cba;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .ticket-preview {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎫 Ticket Creator</h1>
+
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            1. Fill out the ticket details below
+            2. Use the map tools to draw a polygon area for the ticket
+            3. Click "Create Ticket" to save to the system
+        </div>
+
+        <form id="ticketForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ticketId">Ticket ID *</label>
+                    <input type="text" id="ticketId" required placeholder="e.g., MI20250930-001234">
+                </div>
+                <div class="form-group">
+                    <label for="workType">Work Type *</label>
+                    <select id="workType" required>
+                        <option value="">Select work type...</option>
+                        <option value="Water service repair">Water Service Repair</option>
+                        <option value="Gas line inspection">Gas Line Inspection</option>
+                        <option value="Electric utility work">Electric Utility Work</option>
+                        <option value="Sewer maintenance">Sewer Maintenance</option>
+                        <option value="Telecom installation">Telecom Installation</option>
+                        <option value="Road maintenance">Road Maintenance</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="callDate">Call Date</label>
+                    <input type="datetime-local" id="callDate">
+                </div>
+                <div class="form-group">
+                    <label for="dueDate">Due Date *</label>
+                    <input type="datetime-local" id="dueDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="expiration">Expiration Date</label>
+                    <input type="datetime-local" id="expiration">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status">
+                        <option value="Open">Open</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="priority">Priority</label>
+                    <select id="priority">
+                        <option value="Normal">Normal</option>
+                        <option value="High">High</option>
+                        <option value="Emergency">Emergency</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" placeholder="Additional details about the work to be performed..."></textarea>
+            </div>
+
+            <div id="map"></div>
+
+            <div id="polygonStatus" style="margin: 10px 0; font-weight: bold; color: #666;">
+                ⚠️ Please draw a polygon on the map to define the work area
+            </div>
+
+            <div id="statusMessage" class="status"></div>
+
+            <button type="submit" id="submitBtn" disabled>Create Ticket</button>
+            <button type="button" onclick="clearForm()">Clear Form</button>
+            <button type="button" onclick="generateSampleTicket()">Generate Sample</button>
+        </form>
+
+        <div id="ticketPreview" class="ticket-preview" style="display: none;">
+            <h3>Ticket Preview</h3>
+            <pre id="previewContent"></pre>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <script>
+        // Initialize map centered on Nebraska
+        const map = L.map('map').setView([41.2, -96.1], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Drawing functionality
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        const drawControl = new L.Control.Draw({
+            draw: {
+                polygon: true,
+                rectangle: true,
+                marker: false,
+                circle: false,
+                polyline: false,
+                circlemarker: false
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+        map.addControl(drawControl);
+
+        let currentPolygon = null;
+
+        // Handle polygon drawing
+        map.on('draw:created', function(e) {
+            if (currentPolygon) {
+                drawnItems.removeLayer(currentPolygon);
+            }
+            currentPolygon = e.layer;
+            drawnItems.addLayer(currentPolygon);
+            updatePolygonStatus(true);
+        });
+
+        map.on('draw:deleted', function(e) {
+            currentPolygon = null;
+            updatePolygonStatus(false);
+        });
+
+        function updatePolygonStatus(hasPolygon) {
+            const statusEl = document.getElementById('polygonStatus');
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (hasPolygon) {
+                statusEl.innerHTML = '✅ Work area polygon defined';
+                statusEl.style.color = '#28a745';
+                submitBtn.disabled = false;
+            } else {
+                statusEl.innerHTML = '⚠️ Please draw a polygon on the map to define the work area';
+                statusEl.style.color = '#666';
+                submitBtn.disabled = true;
+            }
+        }
+
+        // Form handling
+        document.getElementById('ticketForm').onsubmit = async function(e) {
+            e.preventDefault();
+
+            // Clear any previous status when starting new action
+            clearStatus();
+
+            if (!currentPolygon) {
+                showStatus('Please draw a polygon first!', 'error');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
+
+            try {
+                const coordinates = currentPolygon.getLatLngs()[0].map(p => [p.lng, p.lat]);
+                coordinates.push(coordinates[0]); // Close polygon
+
+                // Clean description field to avoid JSON control character issues
+                const description = document.getElementById('description').value;
+                const cleanDescription = description.replace(/[\r\n\t]/g, ' ').trim();
+
+                const ticket = {
+                    ticket_id: document.getElementById('ticketId').value.trim(),
+                    work_type: document.getElementById('workType').value,
+                    call_date: document.getElementById('callDate').value || null,
+                    due_date: document.getElementById('dueDate').value,
+                    expiration: document.getElementById('expiration').value || null,
+                    status: document.getElementById('status').value,
+                    priority: document.getElementById('priority').value,
+                    description: cleanDescription,
+                    geometry: {
+                        type: 'Polygon',
+                        coordinates: [coordinates]
+                    }
+                };
+
+                console.log('Sending ticket:', JSON.stringify(ticket, null, 2));
+
+                // Validate JSON before sending
+                let jsonBody;
+                try {
+                    jsonBody = JSON.stringify(ticket);
+                    // Test parse to make sure it's valid
+                    JSON.parse(jsonBody);
+                } catch (e) {
+                    showStatus(`❌ Invalid data format: ${e.message}`, 'error');
+                    return;
+                }
+
+                const response = await fetch('https://od011e6rgl.execute-api.us-east-1.amazonaws.com/api/tickets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: jsonBody
+                });
+
+                console.log('Response status:', response.status);
+                const responseText = await response.text();
+                console.log('Response body:', responseText);
+
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (e) {
+                    result = { error: 'Invalid JSON response: ' + responseText };
+                }
+
+                if (response.ok) {
+                    showStatus(`✅ Ticket ${ticket.ticket_id} created successfully!`, 'success');
+                    clearForm();
+                } else {
+                    showStatus(`❌ Error (${response.status}): ${result.error || result.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Network error: ${error.message}`, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Ticket';
+            }
+        };
+
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+
+            // Status stays visible until next action - no auto-hide
+        }
+
+        function clearForm() {
+            document.getElementById('ticketForm').reset();
+            drawnItems.clearLayers();
+            currentPolygon = null;
+            updatePolygonStatus(false);
+            document.getElementById('ticketPreview').style.display = 'none';
+            // Don't clear status - let the user see the last result
+        }
+
+        function clearStatus() {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.style.display = 'none';
+        }
+
+        function generateSampleTicket() {
+            const now = new Date();
+            const dueDate = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days from now
+            const expDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days from now
+
+            // Generate more unique ticket ID with timestamp
+            const timestamp = now.getTime().toString().slice(-8); // Last 8 digits of timestamp
+            const random = Math.floor(Math.random()*1000).toString().padStart(3,'0');
+            document.getElementById('ticketId').value = `NE${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}-${timestamp}${random}`;
+            document.getElementById('workType').value = 'Water service repair';
+            document.getElementById('callDate').value = now.toISOString().slice(0,16);
+            document.getElementById('dueDate').value = dueDate.toISOString().slice(0,16);
+            document.getElementById('expiration').value = expDate.toISOString().slice(0,16);
+            document.getElementById('status').value = 'Open';
+            document.getElementById('priority').value = 'Normal';
+            document.getElementById('description').value = 'Sample ticket for testing - water line repair needed at intersection';
+        }
+
+        // Set default dates
+        window.onload = function() {
+            const now = new Date();
+            const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            document.getElementById('callDate').value = now.toISOString().slice(0,16);
+            document.getElementById('dueDate').value = tomorrow.toISOString().slice(0,16);
+        };
+    </script>
+</body>
+</html>
