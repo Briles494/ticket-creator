@@ -110,6 +110,11 @@
     <div class="container">
         <h1>🎫 Ticket Creator</h1>
 
+        <div style="text-align: center; margin-bottom: 20px;">
+            <a href="index.html" style="margin: 0 10px; color: #007cba; text-decoration: none; font-weight: bold;">🗺️ Map View</a>
+            <a href="dashboard.html" style="margin: 0 10px; color: #007cba; text-decoration: none; font-weight: bold;">📊 Dashboard</a>
+        </div>
+
         <div class="instructions">
             <strong>Instructions:</strong>
             1. Fill out the ticket details below
@@ -202,8 +207,17 @@
     <script>
         // Initialize map centered on Nebraska
         const map = L.map('map').setView([41.2, -96.1], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+
+        // ESRI World Imagery (Satellite) - Base Layer
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri',
+            maxZoom: 19
+        }).addTo(map);
+
+        // ESRI Reference Labels - Overlay Layer
+        const labelsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Labels &copy; Esri',
+            maxZoom: 19
         }).addTo(map);
 
         // Drawing functionality
