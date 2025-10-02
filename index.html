@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket Map - LocateMapper</title>
+    <title>Ticket Map - LocateMapper (Filtered)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * {
@@ -53,10 +53,68 @@
             background: rgba(255,255,255,0.3);
         }
 
+        .filter-bar {
+            background: rgba(255,255,255,0.15);
+            padding: 12px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .filter-group select {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 150px;
+        }
+
+        .filter-group select:focus {
+            outline: 2px solid #FFC107;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .btn-reset {
+            padding: 6px 16px;
+            background: rgba(255,255,255,0.25);
+            border: 1px solid white;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .btn-reset:hover {
+            background: rgba(255,255,255,0.35);
+        }
+
         .stats {
             display: flex;
             gap: 15px;
-            margin-left: auto;
             flex-wrap: wrap;
         }
 
@@ -73,7 +131,7 @@
         }
 
         #map {
-            height: calc(100vh - 80px);
+            height: calc(100vh - 160px);
             width: 100%;
         }
 
@@ -157,9 +215,34 @@
                 white-space: nowrap;
             }
 
+            .filter-bar {
+                padding: 10px 15px;
+                gap: 10px;
+            }
+
+            .filter-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+                width: 100%;
+            }
+
+            .filter-group select {
+                width: 100%;
+            }
+
+            .filter-actions {
+                width: 100%;
+                margin-left: 0;
+                margin-top: 8px;
+            }
+
+            .btn-reset {
+                width: 100%;
+            }
+
             .stats {
                 gap: 8px;
-                margin-left: 0;
                 width: 100%;
                 justify-content: center;
                 margin-top: 8px;
@@ -175,7 +258,7 @@
             }
 
             #map {
-                height: calc(100vh - 140px);
+                height: calc(100vh - 240px);
             }
 
             .legend {
@@ -230,6 +313,19 @@
                 font-size: 12px;
             }
 
+            .filter-bar {
+                padding: 8px 12px;
+            }
+
+            .filter-group label {
+                font-size: 12px;
+            }
+
+            .filter-group select {
+                font-size: 13px;
+                padding: 5px 10px;
+            }
+
             .stat-item {
                 padding: 5px 8px;
                 font-size: 11px;
@@ -264,19 +360,42 @@
 </head>
 <body>
     <div class="header">
-        <h1>🗺️ Ticket Map View</h1>
+        <h1>🗺️ Ticket Map View (Filtered)</h1>
         <div class="nav-links">
             <a href="ticket-creator.html">➕ Create New Ticket</a>
             <a href="dashboard.html">📊 Manage Tickets</a>
+            <a href="index.html">🗺️ Map View (All)</a>
+        </div>
+
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label for="dateFilter">📅 Date:</label>
+                <select id="dateFilter">
+                    <option value="">All Dates</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="statusFilter">🏷️ Status:</label>
+                <select id="statusFilter">
+                    <option value="">All Statuses</option>
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                </select>
+            </div>
+
+            <div class="filter-actions">
+                <button class="btn-reset" onclick="resetFilters()">🔄 Reset Filters</button>
+            </div>
+
             <div class="stats">
                 <div class="stat-item">
+                    <span class="stat-value" id="filteredCount">0</span> Shown
+                </div>
+                <div class="stat-item">
                     <span class="stat-value" id="totalCount">0</span> Total
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value" id="openCount">0</span> Open
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value" id="inProgressCount">0</span> In Progress
                 </div>
             </div>
         </div>
@@ -331,6 +450,10 @@
         };
         legend.addTo(map);
 
+        // Global variables
+        let allTickets = [];
+        let ticketLayers = [];
+
         // Load and display tickets
         async function loadTickets() {
             const loadingEl = document.getElementById('loading');
@@ -347,22 +470,10 @@
                 console.log('Loaded tickets:', data);
 
                 if (data.features && data.features.length > 0) {
+                    allTickets = data.features;
+                    populateDateFilter(data.features);
                     displayTickets(data.features);
-                    updateStats(data.features);
-
-                    // Fit map to show all tickets
-                    const bounds = [];
-                    data.features.forEach(feature => {
-                        if (feature.geometry && feature.geometry.coordinates && feature.geometry.coordinates[0]) {
-                            feature.geometry.coordinates[0].forEach(coord => {
-                                bounds.push([coord[1], coord[0]]);
-                            });
-                        }
-                    });
-
-                    if (bounds.length > 0) {
-                        map.fitBounds(bounds, { padding: [50, 50] });
-                    }
+                    updateStats(data.features, data.features);
                 } else {
                     alert('No tickets found in the system.');
                 }
@@ -374,7 +485,31 @@
             }
         }
 
+        function populateDateFilter(features) {
+            const dates = new Set();
+            features.forEach(feature => {
+                if (feature.properties.due_date) {
+                    const date = new Date(feature.properties.due_date).toLocaleDateString();
+                    dates.add(date);
+                }
+            });
+
+            const dateFilter = document.getElementById('dateFilter');
+            const sortedDates = Array.from(dates).sort((a, b) => new Date(b) - new Date(a));
+
+            sortedDates.forEach(date => {
+                const option = document.createElement('option');
+                option.value = date;
+                option.textContent = date;
+                dateFilter.appendChild(option);
+            });
+        }
+
         function displayTickets(features) {
+            // Clear existing layers
+            ticketLayers.forEach(layer => map.removeLayer(layer));
+            ticketLayers = [];
+
             features.forEach(feature => {
                 const props = feature.properties;
                 const coords = feature.geometry.coordinates[0];
@@ -417,18 +552,67 @@
                 // Bind popup to both polygon and label
                 polygon.bindPopup(popupContent);
                 label.bindPopup(popupContent);
+
+                // Store layers for later removal
+                ticketLayers.push(polygon);
+                ticketLayers.push(label);
             });
+
+            // Fit map to show all visible tickets
+            if (features.length > 0) {
+                const bounds = [];
+                features.forEach(feature => {
+                    if (feature.geometry && feature.geometry.coordinates && feature.geometry.coordinates[0]) {
+                        feature.geometry.coordinates[0].forEach(coord => {
+                            bounds.push([coord[1], coord[0]]);
+                        });
+                    }
+                });
+
+                if (bounds.length > 0) {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            }
         }
 
-        function updateStats(features) {
-            const total = features.length;
-            const open = features.filter(f => f.properties.status === 'Open').length;
-            const inProgress = features.filter(f => f.properties.status === 'In Progress').length;
-
-            document.getElementById('totalCount').textContent = total;
-            document.getElementById('openCount').textContent = open;
-            document.getElementById('inProgressCount').textContent = inProgress;
+        function updateStats(filteredFeatures, allFeatures) {
+            document.getElementById('filteredCount').textContent = filteredFeatures.length;
+            document.getElementById('totalCount').textContent = allFeatures.length;
         }
+
+        function applyFilters() {
+            const dateFilter = document.getElementById('dateFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            let filtered = allTickets;
+
+            // Apply date filter
+            if (dateFilter) {
+                filtered = filtered.filter(f => {
+                    if (!f.properties.due_date) return false;
+                    const ticketDate = new Date(f.properties.due_date).toLocaleDateString();
+                    return ticketDate === dateFilter;
+                });
+            }
+
+            // Apply status filter
+            if (statusFilter) {
+                filtered = filtered.filter(f => f.properties.status === statusFilter);
+            }
+
+            displayTickets(filtered);
+            updateStats(filtered, allTickets);
+        }
+
+        function resetFilters() {
+            document.getElementById('dateFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            applyFilters();
+        }
+
+        // Add event listeners to filters
+        document.getElementById('dateFilter').addEventListener('change', applyFilters);
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
 
         // Load tickets on page load
         window.onload = loadTickets;
