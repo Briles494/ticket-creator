@@ -565,13 +565,13 @@
                     if (line.average_signal_score !== null && line.average_signal_score !== undefined) {
                         const score = line.average_signal_score;
                         if (score >= 90) {
-                            color = '#00FF00'; // Green - Excellent
+                            color = '#00AA00'; // Green - Excellent
                             scoreInfo = ' (Excellent)';
                         } else if (score >= 70) {
-                            color = '#FFFF00'; // Yellow - Good
+                            color = '#FFA500'; // Yellow - Good
                             scoreInfo = ' (Good)';
                         } else {
-                            color = '#FF0000'; // Red - Poor
+                            color = '#CC0000'; // Red - Poor
                             scoreInfo = ' (Needs Attention)';
                         }
                     }
@@ -756,3 +756,4 @@
     </script>
 </body>
 </html>
+
