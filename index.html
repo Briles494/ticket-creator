@@ -407,18 +407,20 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // Initialize map centered on Nebraska
-        const map = L.map('map').setView([41.2, -96.1], 7);
+        const map = L.map('map', { maxZoom: 24 }).setView([41.2, -96.1], 7);
 
         // ESRI World Imagery (Satellite) - Base Layer
         const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri',
-            maxZoom: 19
+            maxZoom: 24,
+            maxNativeZoom: 19
         }).addTo(map);
 
         // ESRI Reference Labels - Overlay Layer
         const labelsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Labels &copy; Esri',
-            maxZoom: 19
+            maxZoom: 24,
+            maxNativeZoom: 19
         }).addTo(map);
 
         // Status color mapping
@@ -555,8 +557,32 @@
                 }
 
                 if (coordinates.length >= 2) {
-                    // Use color_hex from database, fallback to utility type mapping
-                    const color = line.color_hex || utilityColors[line.utility_type] || utilityColors['Unknown'];
+                    // Determine line color based on score or utility type
+                    let color;
+                    let scoreInfo = '';
+
+                    // Priority 1: Use signal score for color if available (quality-based coloring)
+                    if (line.average_signal_score !== null && line.average_signal_score !== undefined) {
+                        const score = line.average_signal_score;
+                        if (score >= 90) {
+                            color = '#00FF00'; // Green - Excellent
+                            scoreInfo = ' (Excellent)';
+                        } else if (score >= 70) {
+                            color = '#FFFF00'; // Yellow - Good
+                            scoreInfo = ' (Good)';
+                        } else {
+                            color = '#FF0000'; // Red - Poor
+                            scoreInfo = ' (Needs Attention)';
+                        }
+                    }
+                    // Priority 2: Use stored color_hex from database
+                    else if (line.color_hex && line.color_hex !== '#808080') {
+                        color = line.color_hex;
+                    }
+                    // Priority 3: Fallback to utility type mapping
+                    else {
+                        color = utilityColors[line.utility_type] || utilityColors['Unknown'];
+                    }
 
                     // Create polyline
                     const polyline = L.polyline(coordinates, {
@@ -568,12 +594,12 @@
                     // Add popup with line details
                     const linePopup = `
                         <div class="ticket-popup">
-                            <h3>${line.line_name}</h3>
+                            <h3>${line.line_name}${scoreInfo}</h3>
                             <div class="field"><span class="label">Type:</span> ${line.utility_type}</div>
                             <div class="field"><span class="label">Length:</span> ${line.length_ft.toFixed(2)} ft</div>
                             <div class="field"><span class="label">Points:</span> ${line.point_count}</div>
-                            ${line.average_signal_score ? `<div class="field"><span class="label">Signal Score:</span> ${line.average_signal_score.toFixed(1)}</div>` : ''}
-                            ${line.average_assurance_score ? `<div class="field"><span class="label">Assurance Score:</span> ${line.average_assurance_score.toFixed(1)}</div>` : ''}
+                            ${line.average_signal_score !== null && line.average_signal_score !== undefined ? `<div class="field"><span class="label">Signal Score:</span> <strong style="color: ${color}">${line.average_signal_score.toFixed(1)}</strong></div>` : ''}
+                            ${line.average_assurance_score !== null && line.average_assurance_score !== undefined ? `<div class="field"><span class="label">Assurance Score:</span> ${line.average_assurance_score.toFixed(1)}</div>` : ''}
                         </div>
                     `;
                     polyline.bindPopup(linePopup);
