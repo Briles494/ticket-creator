@@ -386,6 +386,14 @@
                 </select>
             </div>
 
+            <div class="filter-group">
+                <label for="lineColorMode">🎨 Line Colors:</label>
+                <select id="lineColorMode" onchange="changeLineColorMode()">
+                    <option value="utility">Utility Type (Default)</option>
+                    <option value="score">Signal Score</option>
+                </select>
+            </div>
+
             <div class="filter-actions">
                 <button class="btn-reset" onclick="resetFilters()">🔄 Reset Filters</button>
             </div>
@@ -464,27 +472,40 @@
         };
         legend.addTo(map);
 
-        // Add utility lines legend
+        // Add utility lines legend (dynamic based on color mode)
         const utilityLegend = L.control({ position: 'bottomleft' });
         utilityLegend.onAdd = function(map) {
             const div = L.DomUtil.create('div', 'legend');
-            div.innerHTML = '<h4>Utility Lines</h4>';
-
-            for (const [utility, color] of Object.entries(utilityColors)) {
-                if (utility !== 'Unknown') {
-                    div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: ' + color + '; border-width: 3px;"></div><span>' + utility + '</span></div>';
-                }
-            }
-
+            div.id = 'utilityLegend';
+            updateLegendContent(div);
             return div;
         };
         utilityLegend.addTo(map);
+
+        // Update legend content based on color mode
+        function updateLegendContent(div) {
+            if (lineColorMode === 'score') {
+                div.innerHTML = '<h4>Signal Score</h4>';
+                div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: #00AA00; border-width: 3px;"></div><span>Excellent (≥90)</span></div>';
+                div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: #FFA500; border-width: 3px;"></div><span>Good (70-89)</span></div>';
+                div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: #CC0000; border-width: 3px;"></div><span>Poor (<70)</span></div>';
+            } else {
+                div.innerHTML = '<h4>Utility Lines</h4>';
+                for (const [utility, color] of Object.entries(utilityColors)) {
+                    if (utility !== 'Unknown') {
+                        div.innerHTML += '<div class="legend-item"><div class="legend-color" style="background-color: ' + color + '; border-width: 3px;"></div><span>' + utility + '</span></div>';
+                    }
+                }
+            }
+        }
 
         // Global variables
         let allTickets = [];
         let ticketLayers = [];
         let lineLayers = []; // Store line polylines separately
         let showLines = true; // Toggle for showing/hiding lines
+        let lineColorMode = 'utility'; // 'utility' or 'score'
+        let currentLinesData = {}; // Store lines data for re-rendering
 
         // Load and display tickets
         async function loadTickets() {
@@ -557,31 +578,33 @@
                 }
 
                 if (coordinates.length >= 2) {
-                    // Determine line color based on score or utility type
+                    // Determine line color based on selected mode
                     let color;
                     let scoreInfo = '';
 
-                    // Priority 1: Use signal score for color if available (quality-based coloring)
-                    if (line.average_signal_score !== null && line.average_signal_score !== undefined) {
+                    if (lineColorMode === 'score' && line.average_signal_score !== null && line.average_signal_score !== undefined) {
+                        // Score-based coloring mode
                         const score = line.average_signal_score;
                         if (score >= 90) {
-                            color = '#00AA00'; // Green - Excellent
+                            color = '#00AA00'; // Dark Green - Excellent
                             scoreInfo = ' (Excellent)';
                         } else if (score >= 70) {
-                            color = '#FFA500'; // Yellow - Good
+                            color = '#FFA500'; // Orange - Good (visible on white)
                             scoreInfo = ' (Good)';
                         } else {
-                            color = '#CC0000'; // Red - Poor
+                            color = '#CC0000'; // Dark Red - Poor
                             scoreInfo = ' (Needs Attention)';
                         }
-                    }
-                    // Priority 2: Use stored color_hex from database
-                    else if (line.color_hex && line.color_hex !== '#808080') {
-                        color = line.color_hex;
-                    }
-                    // Priority 3: Fallback to utility type mapping
-                    else {
-                        color = utilityColors[line.utility_type] || utilityColors['Unknown'];
+                    } else {
+                        // Utility type coloring mode (default)
+                        // Priority 1: Use stored color_hex from database
+                        if (line.color_hex && line.color_hex !== '#808080') {
+                            color = line.color_hex;
+                        }
+                        // Priority 2: Fallback to utility type mapping
+                        else {
+                            color = utilityColors[line.utility_type] || utilityColors['Unknown'];
+                        }
                     }
 
                     // Create polyline
@@ -672,6 +695,8 @@
                 const linesData = await loadTicketLines(props.ticket_id);
                 let linesSummary = '';
                 if (linesData && linesData.lines && linesData.lines.length > 0) {
+                    // Store lines data for re-rendering when color mode changes
+                    currentLinesData[props.ticket_id] = linesData;
                     displayTicketLines(linesData);
                     const totalLength = linesData.lines.reduce((sum, l) => sum + l.length_ft, 0);
                     linesSummary = '<div class="field"><span class="label">Lines Located:</span> ' + linesData.count + ' (' + totalLength.toFixed(0) + ' ft total)</div>';
@@ -747,6 +772,29 @@
             applyFilters();
         }
 
+        // Change line color mode and re-render all lines
+        function changeLineColorMode() {
+            const select = document.getElementById('lineColorMode');
+            lineColorMode = select.value;
+
+            // Update legend
+            const legendDiv = document.getElementById('utilityLegend');
+            if (legendDiv) {
+                updateLegendContent(legendDiv);
+            }
+
+            // Remove all existing line layers
+            lineLayers.forEach(layer => map.removeLayer(layer));
+            lineLayers = [];
+
+            // Re-render all stored lines with new color mode
+            for (const ticketId in currentLinesData) {
+                displayTicketLines(currentLinesData[ticketId]);
+            }
+
+            console.log('Line color mode changed to:', lineColorMode);
+        }
+
         // Add event listeners to filters
         document.getElementById('dateFilter').addEventListener('change', applyFilters);
         document.getElementById('statusFilter').addEventListener('change', applyFilters);
@@ -756,4 +804,3 @@
     </script>
 </body>
 </html>
-
