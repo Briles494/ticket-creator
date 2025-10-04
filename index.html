@@ -1,346 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket Map - LocateMapper (Filtered)</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ticket Map - LocateMapper (Filtered)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; font-family: Arial, sans-serif; }
 
-        body {
-            font-family: Arial, sans-serif;
-            height: 100vh;
-            overflow: hidden;
-        }
+    .page {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        transition: all 0.4s ease;
+    }
 
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, #007cba 0%, #005a8b 100%);
-            color: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            z-index: 1000;
-            position: relative;
-            transition: transform 0.4s ease;
-        }
+    /* HEADER */
+    .header {
+        background: linear-gradient(135deg, #007cba 0%, #005a8b 100%);
+        color: white;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        transition: max-height 0.4s ease, opacity 0.3s ease;
+        overflow: hidden;
+    }
 
-        .header.collapsed {
-            transform: translateY(-100%);
-        }
+    .header-content {
+        padding: 15px 20px;
+    }
 
-        .header-content {
-            padding: 15px 20px;
-        }
+    .header h1 {
+        font-size: 22px;
+        margin-bottom: 10px;
+    }
 
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
+    .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
 
-        .nav-links {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
+    .nav-links a {
+        color: white;
+        background: rgba(255,255,255,0.2);
+        border-radius: 4px;
+        padding: 6px 12px;
+        text-decoration: none;
+        transition: background 0.3s;
+    }
 
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            padding: 8px 16px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
-            transition: background 0.3s;
-            font-weight: 500;
-        }
+    .nav-links a:hover { background: rgba(255,255,255,0.3); }
 
-        .nav-links a:hover {
-            background: rgba(255,255,255,0.3);
-        }
+    /* Toggle button */
+    #headerToggle {
+        position: absolute;
+        top: 5px;
+        right: 15px;
+        z-index: 1001;
+        background: rgba(0,0,0,0.5);
+        border: none;
+        color: white;
+        font-weight: bold;
+        border-radius: 4px;
+        padding: 6px 12px;
+        cursor: pointer;
+    }
 
-        /* Filter bar */
-        .filter-bar {
-            background: rgba(255,255,255,0.15);
-            padding: 12px 20px;
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            flex-wrap: wrap;
-            border-top: 1px solid rgba(255,255,255,0.2);
-        }
+    #headerToggle:hover {
+        background: rgba(0,0,0,0.7);
+    }
 
-        .filter-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+    /* MAP AREA */
+    #map {
+        flex: 1;
+        transition: height 0.4s ease;
+    }
 
-        .filter-group label {
-            font-size: 14px;
-            font-weight: 500;
-            white-space: nowrap;
-        }
+    /* Collapsed state */
+    .header.collapsed {
+        max-height: 0;
+        opacity: 0;
+    }
 
-        .filter-group select {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            background: white;
-            color: #333;
-            font-size: 14px;
-            cursor: pointer;
-            min-width: 150px;
-        }
+    /* LEGEND */
+    .legend {
+        background: white;
+        padding: 10px;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        font-size: 13px;
+    }
 
-        .filter-group select:focus {
-            outline: 2px solid #FFC107;
-        }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 6px;
+    }
 
-        .filter-actions {
-            display: flex;
-            gap: 8px;
-            margin-left: auto;
-        }
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        margin-right: 8px;
+        border: 1px solid #333;
+    }
 
-        .btn-reset, .btn-refresh {
-            padding: 6px 16px;
-            background: rgba(255,255,255,0.25);
-            border: 1px solid white;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: background 0.3s;
-        }
+    .ticket-popup h3 { color: #007cba; margin-bottom: 6px; }
 
-        .btn-reset:hover, .btn-refresh:hover {
-            background: rgba(255,255,255,0.35);
-        }
-
-        .search-container {
-            position: relative;
-            flex-grow: 1;
-            max-width: 400px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .search-input:focus {
-            outline: 2px solid #FFC107;
-        }
-
-        .stats {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .stat-item {
-            background: rgba(255,255,255,0.15);
-            padding: 8px 15px;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .stat-value {
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        /* Header toggle */
-        .header-toggle {
-            position: fixed;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1001;
-            background: #007cba;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 0 0 8px 8px;
-            cursor: pointer;
-            font-size: 16px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
-        }
-
-        .header-toggle:hover {
-            background: #005a8b;
-        }
-
-        #map {
-            width: 100%;
-            height: calc(100vh - 160px);
-            transition: height 0.4s ease;
-        }
-
-        /* Legend */
-        .legend {
-            background: white;
-            padding: 15px;
-            border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        }
-
-        .legend h4 {
-            margin-bottom: 10px;
-            color: #333;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            margin-right: 10px;
-            border: 2px solid #333;
-            border-radius: 2px;
-        }
-
-        .ticket-popup {
-            font-size: 14px;
-        }
-
-        .ticket-popup h3 {
-            color: #007cba;
-            margin-bottom: 10px;
-        }
-
-        .ticket-popup .field {
-            margin: 5px 0;
-        }
-
-        .ticket-popup .label {
-            font-weight: bold;
-            color: #555;
-        }
-
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            z-index: 2000;
-            font-size: 18px;
-            color: #007cba;
-        }
-
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            .header-content {
-                padding: 10px 15px;
-            }
-
-            .header h1 {
-                font-size: 18px;
-            }
-
-            #map {
-                height: calc(100vh - 280px);
-            }
-        }
-    </style>
+    @media (max-width: 768px) {
+        .header h1 { font-size: 18px; }
+    }
+</style>
 </head>
 <body>
-    <!-- Header Toggle Button -->
-    <button class="header-toggle" id="headerToggle" onclick="toggleHeader()">▲ Hide Controls</button>
-
-    <div class="header" id="header">
-        <div class="header-content">
-            <h1>🗺️ Ticket Map View (Filtered)</h1>
-            <div class="nav-links">
-                <a href="ticket-creator.html">➕ Create New Ticket</a>
-                <a href="dashboard.html">📊 Manage Tickets</a>
-                <a href="index.html">🗺️ Map View (All)</a>
-            </div>
-
-            <div class="filter-bar">
-                <div class="filter-group">
-                    <label for="ticketFilter">🎫 Ticket:</label>
-                    <select id="ticketFilter"><option value="">All Tickets</option></select>
-                </div>
-
-                <div class="filter-group">
-                    <label for="dateFilter">📅 Date:</label>
-                    <select id="dateFilter"><option value="">All Dates</option></select>
-                </div>
-
-                <div class="filter-group">
-                    <label for="statusFilter">🏷️ Status:</label>
-                    <select id="statusFilter">
-                        <option value="">All Statuses</option>
-                        <option value="Open">Open</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Complete">Complete</option>
-                        <option value="Cancelled">Cancelled</option>
-                        <option value="On Hold">On Hold</option>
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label for="lineColorMode">🎨 Line Colors:</label>
-                    <select id="lineColorMode" onchange="changeLineColorMode()">
-                        <option value="utility">Utility Type (Default)</option>
-                        <option value="signal">Signal Score</option>
-                        <option value="assurance">Assurance Score</option>
-                    </select>
-                </div>
-
-                <div class="search-container">
-                    <input type="text" id="addressSearch" class="search-input" placeholder="🔍 Search address or place...">
-                </div>
-
-                <div class="filter-actions">
-                    <button class="btn-refresh" onclick="refreshData()">🔄 Refresh</button>
-                    <button class="btn-reset" onclick="resetFilters()">↩️ Reset</button>
-                </div>
-
-                <div class="stats">
-                    <div class="stat-item"><span class="stat-value" id="filteredCount">0</span> Shown</div>
-                    <div class="stat-item"><span class="stat-value" id="totalCount">0</span> Total</div>
+    <div class="page">
+        <div class="header" id="header">
+            <div class="header-content">
+                <h1>🗺️ Ticket Map View (Filtered)</h1>
+                <div class="nav-links">
+                    <a href="#">➕ Create New Ticket</a>
+                    <a href="#">📊 Manage Tickets</a>
+                    <a href="#">🗺️ Map View (All)</a>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div id="map"></div>
-    <div id="loading" class="loading" style="display: none;">Loading tickets...</div>
+        <button id="headerToggle">▲ Hide Controls</button>
+
+        <div id="map"></div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const map = L.map('map', { maxZoom: 24 }).setView([41.2, -96.1], 7);
+        // Initialize map
+        const map = L.map('map').setView([41.2, -96.1], 7);
 
-        // Base layers
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri',
-            maxZoom: 24,
-            maxNativeZoom: 19
-        }).addTo(map);
-
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Labels &copy; Esri',
-            maxZoom: 24,
-            maxNativeZoom: 19
+            maxZoom: 19
         }).addTo(map);
 
         const statusColors = {
@@ -351,76 +147,37 @@
             'On Hold': '#17a2b8'
         };
 
-        const priorityColors = { 'Emergency': '#dc3545', 'High': '#fd7e14', 'Normal': '#007cba' };
-        const utilityColors = { 'Electric': '#FF0000', 'Gas': '#FFFF00', 'Water': '#0000FF', 'Sewer': '#00FF00', 'Telecom': '#FF8F28', 'Cable': '#FF7200', 'Fiber': '#00FFFF', 'Unknown': '#808080' };
-
-        let allTickets = [], ticketLayers = [], lineLayers = [], currentLinesData = {};
-        let lineColorMode = 'utility', headerCollapsed = false;
-
-        // Toggle Header and resize map
-        function toggleHeader() {
-            const header = document.getElementById('header');
-            const toggleBtn = document.getElementById('headerToggle');
-            const mapDiv = document.getElementById('map');
-
-            headerCollapsed = !headerCollapsed;
-
-            if (headerCollapsed) {
-                header.classList.add('collapsed');
-                mapDiv.style.height = '100vh';
-                toggleBtn.innerHTML = '▼ Show Controls';
-            } else {
-                header.classList.remove('collapsed');
-                const mapHeight = window.innerWidth < 768 ? 'calc(100vh - 280px)' : 'calc(100vh - 160px)';
-                mapDiv.style.height = mapHeight;
-                toggleBtn.innerHTML = '▲ Hide Controls';
-            }
-
-            setTimeout(() => map.invalidateSize(), 400);
-        }
-
-        // LEGEND (unchanged)
+        // Add legend
         const legend = L.control({ position: 'bottomright' });
         legend.onAdd = function() {
             const div = L.DomUtil.create('div', 'legend');
             div.innerHTML = '<h4>Status</h4>';
             for (const [status, color] of Object.entries(statusColors)) {
-                div.innerHTML += `<div class="legend-item"><div class="legend-color" style="background:${color};"></div>${status}</div>`;
+                div.innerHTML += `<div class="legend-item">
+                    <div class="legend-color" style="background:${color}"></div>${status}</div>`;
             }
             return div;
         };
         legend.addTo(map);
 
-        // Simplified data loading to preserve function structure
-        async function loadTickets() {
-            const loading = document.getElementById('loading');
-            loading.style.display = 'block';
-            try {
-                const response = await fetch('https://od011e6rgl.execute-api.us-east-1.amazonaws.com/api/tickets');
-                const data = await response.json();
-                if (data.features?.length) {
-                    allTickets = data.features;
-                    displayTickets(allTickets);
-                }
-            } catch (e) { console.error(e); }
-            loading.style.display = 'none';
-        }
+        // Toggle Header Visibility
+        const header = document.getElementById('header');
+        const toggleBtn = document.getElementById('headerToggle');
+        let collapsed = false;
 
-        function displayTickets(features) {
-            ticketLayers.forEach(l => map.removeLayer(l));
-            ticketLayers = [];
-            features.forEach(feature => {
-                const props = feature.properties;
-                const coords = feature.geometry.coordinates[0].map(c => [c[1], c[0]]);
-                const color = statusColors[props.status] || '#007cba';
-                const poly = L.polygon(coords, { color, fillColor: color, fillOpacity: 0.3, weight: 3 }).addTo(map);
-                ticketLayers.push(poly);
-                poly.bindPopup(`<b>${props.ticket_id}</b><br>${props.status}`);
-            });
-            map.fitBounds(L.featureGroup(ticketLayers).getBounds(), { padding: [50, 50] });
-        }
+        toggleBtn.addEventListener('click', () => {
+            collapsed = !collapsed;
+            if (collapsed) {
+                header.classList.add('collapsed');
+                toggleBtn.textContent = '▼ Show Controls';
+            } else {
+                header.classList.remove('collapsed');
+                toggleBtn.textContent = '▲ Hide Controls';
+            }
 
-        window.onload = loadTickets;
+            // Let layout settle before redrawing map
+            setTimeout(() => map.invalidateSize(), 450);
+        });
     </script>
 </body>
 </html>
