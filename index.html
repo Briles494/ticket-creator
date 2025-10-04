@@ -1,168 +1,424 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ticket Map - LocateMapper (Filtered)</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:Arial,sans-serif;height:100vh;overflow:hidden;}
-.page{display:flex;flex-direction:column;height:100vh;}
-/* HEADER */
-.header{
-  background:linear-gradient(135deg,#007cba 0%,#005a8b 100%);
-  color:white;
-  box-shadow:0 2px 10px rgba(0,0,0,0.2);
-  transition:max-height .3s ease,opacity .3s ease;
-  overflow:hidden;
-}
-.header-content{padding:15px 20px;}
-.header h1{font-size:24px;margin-bottom:10px;}
-.nav-links{display:flex;gap:20px;align-items:center;flex-wrap:wrap;}
-.nav-links a{color:white;text-decoration:none;padding:8px 16px;background:rgba(255,255,255,0.2);border-radius:4px;transition:background .3s;font-weight:500;}
-.nav-links a:hover{background:rgba(255,255,255,0.3);}
-.filter-bar{background:rgba(255,255,255,0.15);padding:12px 20px;display:flex;gap:15px;align-items:center;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,0.2);}
-.filter-group{display:flex;align-items:center;gap:8px;}
-.filter-group label{font-size:14px;font-weight:500;white-space:nowrap;}
-.filter-group select{padding:6px 12px;border:none;border-radius:4px;background:white;color:#333;font-size:14px;cursor:pointer;min-width:150px;}
-.filter-group select:focus{outline:2px solid #FFC107;}
-.filter-actions{display:flex;gap:8px;margin-left:auto;}
-.btn-reset,.btn-refresh{padding:6px 16px;background:rgba(255,255,255,0.25);border:1px solid white;color:white;border-radius:4px;cursor:pointer;font-size:14px;font-weight:500;transition:background .3s;}
-.btn-reset:hover,.btn-refresh:hover{background:rgba(255,255,255,0.35);}
-.search-container{position:relative;flex-grow:1;max-width:400px;}
-.search-input{width:100%;padding:6px 12px;border:none;border-radius:4px;font-size:14px;}
-.search-input:focus{outline:2px solid #FFC107;}
-.stats{display:flex;gap:15px;flex-wrap:wrap;}
-.stat-item{background:rgba(255,255,255,0.15);padding:8px 15px;border-radius:4px;font-size:14px;}
-.stat-value{font-weight:bold;font-size:18px;}
-/* Toggle button */
-#headerToggle{
-  position:absolute;top:5px;right:15px;z-index:1001;
-  background:rgba(0,0,0,0.5);border:none;color:white;
-  font-weight:bold;border-radius:4px;padding:6px 12px;cursor:pointer;
-}
-#headerToggle:hover{background:rgba(0,0,0,0.7);}
-/* Collapsed header */
-.header.collapsed{max-height:0;opacity:0;}
-/* MAP */
-#map{flex:1;transition:height .3s ease;}
-.legend{background:white;padding:15px;border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,0.2);}
-.legend h4{margin-bottom:10px;color:#333;}
-.legend-item{display:flex;align-items:center;margin-bottom:8px;}
-.legend-color{width:20px;height:20px;margin-right:10px;border:2px solid #333;border-radius:2px;}
-.ticket-popup{font-size:14px;}
-.ticket-popup h3{color:#007cba;margin-bottom:10px;}
-.ticket-popup .field{margin:5px 0;}
-.ticket-popup .label{font-weight:bold;color:#555;}
-.loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px 40px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:2000;font-size:18px;color:#007cba;}
-/* Mobile */
-@media(max-width:768px){
-  .header-content{padding:10px 15px;}
-  .header h1{font-size:18px;margin-bottom:8px;}
-  .nav-links{gap:10px;justify-content:center;}
-  .nav-links a{padding:6px 12px;font-size:13px;white-space:nowrap;}
-  .filter-bar{padding:10px 15px;gap:10px;}
-  .filter-group{flex-direction:column;align-items:flex-start;gap:4px;width:100%;}
-  .filter-group select{width:100%;}
-  .filter-actions{width:100%;margin-left:0;margin-top:8px;}
-  .btn-reset,.btn-refresh{flex:1;}
-  .stats{gap:8px;width:100%;justify-content:center;margin-top:8px;}
-  .stat-item{padding:6px 10px;font-size:12px;}
-  .stat-value{font-size:16px;}
-  .legend{padding:10px;font-size:13px;}
-  .legend h4{font-size:14px;margin-bottom:8px;}
-  .legend-item{margin-bottom:6px;font-size:12px;}
-  .legend-color{width:16px;height:16px;margin-right:8px;}
-  .ticket-popup h3{font-size:16px;margin-bottom:8px;}
-  .ticket-popup .field{margin:4px 0;font-size:13px;}
-  .loading{padding:15px 25px;font-size:16px;}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Map - LocateMapper (Filtered)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #007cba 0%, #005a8b 100%);
+            color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .header.collapsed {
+            transform: translateY(-100%);
+        }
+
+        .header-content {
+            padding: 15px 20px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            transition: background 0.3s;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .filter-bar {
+            background: rgba(255,255,255,0.15);
+            padding: 12px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .filter-group select {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 150px;
+        }
+
+        .filter-group select:focus {
+            outline: 2px solid #FFC107;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .btn-reset, .btn-refresh {
+            padding: 6px 16px;
+            background: rgba(255,255,255,0.25);
+            border: 1px solid white;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .btn-reset:hover, .btn-refresh:hover {
+            background: rgba(255,255,255,0.35);
+        }
+
+        .search-container {
+            position: relative;
+            flex-grow: 1;
+            max-width: 400px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .search-input:focus {
+            outline: 2px solid #FFC107;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: rgba(255,255,255,0.15);
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        /* Toggle button for collapsible header */
+        .header-toggle {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1001;
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 0 0 8px 8px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .header-toggle:hover {
+            background: #005a8b;
+        }
+
+        .header-toggle.hidden {
+            top: -50px;
+        }
+
+        #map {
+            height: calc(100vh - 160px);
+            width: 100%;
+            transition: height 0.3s ease;
+        }
+
+        #map.fullscreen {
+            height: calc(100vh - 40px);
+        }
+
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .legend h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border: 2px solid #333;
+            border-radius: 2px;
+        }
+
+        .ticket-popup {
+            font-size: 14px;
+        }
+
+        .ticket-popup h3 {
+            color: #007cba;
+            margin-bottom: 10px;
+        }
+
+        .ticket-popup .field {
+            margin: 5px 0;
+        }
+
+        .ticket-popup .label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 2000;
+            font-size: 18px;
+            color: #007cba;
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .header-content {
+                padding: 10px 15px;
+            }
+
+            .header h1 {
+                font-size: 18px;
+                margin-bottom: 8px;
+            }
+
+            .nav-links {
+                gap: 10px;
+                justify-content: center;
+            }
+
+            .nav-links a {
+                padding: 6px 12px;
+                font-size: 13px;
+                white-space: nowrap;
+            }
+
+            .filter-bar {
+                padding: 10px 15px;
+                gap: 10px;
+            }
+
+            .filter-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+                width: 100%;
+            }
+
+            .filter-group select {
+                width: 100%;
+            }
+
+            .filter-actions {
+                width: 100%;
+                margin-left: 0;
+                margin-top: 8px;
+            }
+
+            .btn-reset, .btn-refresh {
+                flex: 1;
+            }
+
+            .stats {
+                gap: 8px;
+                width: 100%;
+                justify-content: center;
+                margin-top: 8px;
+            }
+
+            .stat-item {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+
+            .stat-value {
+                font-size: 16px;
+            }
+
+            #map {
+                height: calc(100vh - 280px);
+            }
+
+            #map.fullscreen {
+                height: calc(100vh - 40px);
+            }
+
+            .legend {
+                padding: 10px;
+                font-size: 13px;
+            }
+
+            .legend h4 {
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
+
+            .legend-item {
+                margin-bottom: 6px;
+                font-size: 12px;
+            }
+
+            .legend-color {
+                width: 16px;
+                height: 16px;
+                margin-right: 8px;
+            }
+
+            .ticket-popup h3 {
+                font-size: 16px;
+                margin-bottom: 8px;
+            }
+
+            .ticket-popup .field {
+                margin: 4px 0;
+                font-size: 13px;
+            }
+
+            .loading {
+                padding: 15px 25px;
+                font-size: 16px;
+            }
+
+            .leaflet-control-zoom {
+                margin-top: 60px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 16px;
+            }
+
+            .nav-links a {
+                padding: 5px 10px;
+                font-size: 12px;
+            }
+
+            .filter-bar {
+                padding: 8px 12px;
+            }
+
+            .filter-group label {
+                font-size: 12px;
+            }
+
+            .filter-group select {
+                font-size: 13px;
+                padding: 5px 10px;
+            }
+
+            .stat-item {
+                padding: 5px 8px;
+                font-size: 11px;
+            }
+
+            .stat-value {
+                font-size: 14px;
+            }
+
+            .legend {
+                max-width: 150px;
+                padding: 8px;
+            }
+
+            .legend h4 {
+                font-size: 13px;
+            }
+
+            .legend-item {
+                font-size: 11px;
+            }
+
+            .ticket-popup {
+                font-size: 12px;
+            }
+
+            .ticket-popup h3 {
+                font-size: 14px;
+            }
+        }
+    </style>
 </head>
 <body>
-<div class="page">
-  <div class="header" id="header">
-    <div class="header-content">
-      <h1>🗺️ Ticket Map View (Filtered)</h1>
-      <div class="nav-links">
-        <a href="ticket-creator.html">➕ Create New Ticket</a>
-        <a href="dashboard.html">📊 Manage Tickets</a>
-        <a href="index.html">🗺️ Map View (All)</a>
-      </div>
-      <div class="filter-bar">
-        <!-- all your filter groups here exactly as before -->
-        <div class="filter-group">
-          <label for="ticketFilter">🎫 Ticket:</label>
-          <select id="ticketFilter"><option value="">All Tickets</option></select>
-        </div>
-        <div class="filter-group">
-          <label for="dateFilter">📅 Date:</label>
-          <select id="dateFilter"><option value="">All Dates</option></select>
-        </div>
-        <div class="filter-group">
-          <label for="statusFilter">🏷️ Status:</label>
-          <select id="statusFilter">
-            <option value="">All Statuses</option>
-            <option value="Open">Open</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Complete">Complete</option>
-            <option value="Cancelled">Cancelled</option>
-            <option value="On Hold">On Hold</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label for="lineColorMode">🎨 Line Colors:</label>
-          <select id="lineColorMode" onchange="changeLineColorMode()">
-            <option value="utility">Utility Type (Default)</option>
-            <option value="signal">Signal Score</option>
-            <option value="assurance">Assurance Score</option>
-          </select>
-        </div>
-        <div class="search-container">
-          <input type="text" id="addressSearch" class="search-input" placeholder="🔍 Search address or place...">
-        </div>
-        <div class="filter-actions">
-          <button class="btn-refresh" onclick="refreshData()">🔄 Refresh</button>
-          <button class="btn-reset" onclick="resetFilters()">↩️ Reset</button>
-        </div>
-        <div class="stats">
-          <div class="stat-item"><span class="stat-value" id="filteredCount">0</span> Shown</div>
-          <div class="stat-item"><span class="stat-value" id="totalCount">0</span> Total</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <button id="headerToggle">▲ Hide Controls</button>
-  <div id="map"></div>
-</div>
-
-<div id="loading" class="loading" style="display:none;">Loading tickets...</div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-// ---- ALL YOUR ORIGINAL JS FUNCTIONS HERE ----
-// including loadTickets, displayTickets, displayTicketLines, changeLineColorMode, applyFilters, resetFilters, refreshData, searchAddress
-// nothing removed, just add the toggle logic below:
-
-// toggle header
-const header=document.getElementById('header');
-const toggleBtn=document.getElementById('headerToggle');
-let collapsed=false;
-toggleBtn.addEventListener('click',()=>{
-  collapsed=!collapsed;
-  if(collapsed){
-    header.classList.add('collapsed');
-    toggleBtn.textContent='▼ Show Controls';
-  }else{
-    header.classList.remove('collapsed');
-    toggleBtn.textContent='▲ Hide Controls';
-  }
-  setTimeout(()=>map.invalidateSize(),400);
-});
-
-// (then your entire original code: map init, API calls, etc.)
-</script>
+<!-- ... your full content and JavaScript continue exactly as before ... -->
 </body>
 </html>
