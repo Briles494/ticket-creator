@@ -472,15 +472,13 @@
         };
         legend.addTo(map);
 
-        // Add utility lines legend (dynamic based on color mode)
-        const utilityLegend = L.control({ position: 'bottomleft' });
-        utilityLegend.onAdd = function(map) {
-            const div = L.DomUtil.create('div', 'legend');
-            div.id = 'utilityLegend';
-            updateLegendContent(div);
-            return div;
-        };
-        utilityLegend.addTo(map);
+        // Global variables
+        let allTickets = [];
+        let ticketLayers = [];
+        let lineLayers = []; // Store line polylines separately
+        let showLines = true; // Toggle for showing/hiding lines
+        let lineColorMode = 'utility'; // 'utility' or 'score'
+        let currentLinesData = {}; // Store lines data for re-rendering
 
         // Update legend content based on color mode
         function updateLegendContent(div) {
@@ -499,13 +497,15 @@
             }
         }
 
-        // Global variables
-        let allTickets = [];
-        let ticketLayers = [];
-        let lineLayers = []; // Store line polylines separately
-        let showLines = true; // Toggle for showing/hiding lines
-        let lineColorMode = 'utility'; // 'utility' or 'score'
-        let currentLinesData = {}; // Store lines data for re-rendering
+        // Add utility lines legend (dynamic based on color mode)
+        const utilityLegend = L.control({ position: 'bottomleft' });
+        utilityLegend.onAdd = function(map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.id = 'utilityLegend';
+            updateLegendContent(div);
+            return div;
+        };
+        utilityLegend.addTo(map);
 
         // Load and display tickets
         async function loadTickets() {
