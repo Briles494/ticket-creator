@@ -14,10 +14,8 @@
 
         body {
             font-family: Arial, sans-serif;
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            overflow: hidden;
+            height: 100vh;
+            overflow-y: auto;
         }
 
         .header {
@@ -25,14 +23,9 @@
             color: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             z-index: 1000;
-            position: absolute;
+            position: relative;
             transition: all 0.3s ease;
         }
-
-        .header.collapsed {
-            transform: translateY(-100%);
-        }
-
         .header-content {
             padding: 15px 20px;
         }
@@ -158,38 +151,13 @@
             font-size: 18px;
         }
 
-        /* Toggle button for collapsible header */
-        .header-toggle {
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1100;
-            background: #007cba;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 0 0 8px 8px;
-            cursor: pointer;
-            font-size: 16px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
-        }
-
-        .header-toggle:hover {
-            background: #005a8b;
-        }
-
         #map {
-            position: absolute;
-            height: calc(100vh - 160px);
-            width: 100%;
-            transition: height 0.3s ease;
-        }
+    width: 100%;
+    height: 70vh;       /* take 70% of screen height */
+    min-height: 400px;  /* ensures usability */
+    margin-top: 10px;
+}
 
-        #map.fullscreen {
-            height: calc(100vh - 40px);
-        }
 
         .legend {
             background: white;
@@ -359,7 +327,7 @@
 
             /* Leaflet zoom controls adjustment */
             .leaflet-control-zoom {
-                margin-top: 120px !important;
+                margin-top: 60px !important;
             }
         }
 
@@ -419,8 +387,6 @@
     </style>
 </head>
 <body>
-    <!-- Header Toggle Button -->
-    <button class="header-toggle" id="headerToggle" onclick="toggleHeader()">▼ Show Controls</button>
 
     <div class="header" id="header">
         <div class="header-content">
@@ -592,35 +558,6 @@
         let lineColorMode = 'utility';
         let currentLinesData = {};
         let currentMapView = null; // Store current view state
-        let headerCollapsed = false;
-
-        // Toggle header visibility
-        function toggleHeader() {
-            const header = document.getElementById('header');
-            const toggleBtn = document.getElementById('headerToggle');
-            const mapDiv = document.getElementById('map');
-
-            headerCollapsed = !headerCollapsed;
-
-            if (headerCollapsed) {
-                header.classList.add('collapsed');
-                mapDiv.classList.add('fullscreen');
-                toggleBtn.innerHTML = '▼ Show Controls';
-                toggleBtn.classList.remove('hidden');
-            } else {
-                header.classList.remove('collapsed');
-                mapDiv.classList.remove('fullscreen');
-                toggleBtn.innerHTML = '▲ Hide Controls';
-                setTimeout(() => {
-                    toggleBtn.classList.add('hidden');
-                }, 3000);
-            }
-
-            // Invalidate map size after transition
-            setTimeout(() => {
-                map.invalidateSize();
-            }, 300);
-        }
 
         // Update legend content based on color mode
         function updateLegendContent(div) {
