@@ -14,8 +14,10 @@
 
         body {
             font-family: Arial, sans-serif;
-            height: 100vh;
-            overflow: hidden;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    overflow: hidden;
         }
 
         .header {
@@ -23,7 +25,7 @@
             color: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             z-index: 1000;
-            position: relative;
+            position: absolute;
             transition: all 0.3s ease;
         }
 
@@ -158,11 +160,11 @@
 
         /* Toggle button for collapsible header */
         .header-toggle {
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1001;
+            z-index: 1100;
             background: #007cba;
             color: white;
             border: none;
@@ -596,32 +598,29 @@
         let headerCollapsed = false;
 
         // Toggle header visibility
-        function toggleHeader() {
-            const header = document.getElementById('header');
-            const toggleBtn = document.getElementById('headerToggle');
-            const mapDiv = document.getElementById('map');
+      function toggleHeader() {
+    const header = document.getElementById('header');
+    const toggleBtn = document.getElementById('headerToggle');
 
-            headerCollapsed = !headerCollapsed;
+    headerCollapsed = !headerCollapsed;
 
-            if (headerCollapsed) {
-                header.classList.add('collapsed');
-                mapDiv.classList.add('fullscreen');
-                toggleBtn.innerHTML = '▼ Show Controls';
-                toggleBtn.classList.remove('hidden');
-            } else {
-                header.classList.remove('collapsed');
-                mapDiv.classList.remove('fullscreen');
-                toggleBtn.innerHTML = '▲ Hide Controls';
-                setTimeout(() => {
-                    toggleBtn.classList.add('hidden');
-                }, 3000);
-            }
+    if (headerCollapsed) {
+        header.classList.add('collapsed');
+        toggleBtn.innerHTML = '▼ Show Controls';
+        toggleBtn.classList.remove('hidden');
+    } else {
+        header.classList.remove('collapsed');
+        toggleBtn.innerHTML = '▲ Hide Controls';
+        setTimeout(() => {
+            toggleBtn.classList.add('hidden');
+        }, 3000);
+    }
 
-            // Invalidate map size after transition
-            setTimeout(() => {
-                map.invalidateSize();
-            }, 300);
-        }
+    // Recalculate map tiles after header transition
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 300);
+}
 
         // Update legend content based on color mode
         function updateLegendContent(div) {
