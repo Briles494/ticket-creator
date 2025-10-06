@@ -53,19 +53,27 @@
 
   // compute handler: builds output string and posts back
   function handleCompute(data, sourceOrigin, sourceWindow) {
-    try {
-      const freqs = data.freqs;
-      const Zs = data.Zs;
-      const userC_nF = data.userC;
-      const knownLen = data.knownLen || 0;
-      // run fit
-      const res = fitParams(freqs, Zs);
-      const [Rdc,k,C] = res.best;
-      const Zpred = res.bestPred;
-      const R_PER_FT = 0.00159;
-      const len_R = Rdc / R_PER_FT;
-      const user_C_per_ft = userC_nF * 1e-9;
-      const len_C = (user_C_per_ft>0) ? C / user_C_per_ft : 0;
+  try {
+    const freqs = data.freqs;
+    const Zs = data.Zs;
+    let userC_nF = data.userC;
+    let knownLen = data.knownLen || 0;
+
+    // --- New safety patch ---
+    for (let i = 0; i < Zs.length; i++) {
+      if (Zs[i] === 0) Zs[i] = 0.01;
+    }
+    if (userC_nF === 0) userC_nF = 0.01;
+    if (knownLen === 0) knownLen = 0.01;
+    // ------------------------
+
+    // run fit
+    const res = fitParams(freqs, Zs);
+    const [Rdc, k, C] = res.best;
+    const Zpred = res.bestPred;
+
+    const user_C_per_ft = userC_nF * 1e-9;
+    const len_C = (user_C_per_ft > 0) ? C / user_C_per_ft : 0;
 
       // build text result
       let out = [];
