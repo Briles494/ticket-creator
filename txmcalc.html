@@ -137,33 +137,43 @@
     }
 
     function fitParams(freqs, volts, mamps) {
-      let Z_meas = freqs.map((f, i) => volts[i] / (mamps[i] / 1000));
-      let bestErr = 1e99;
-      let best = [0,0,0];
-      let bestPred = [];
+  let Z_meas = freqs.map((f, i) => volts[i] / (mamps[i] / 1000));
+  let bestErr = 1e99;
+  let best = [0,0,0];
+  let bestPred = [];
 
-      for (let Rdc=100; Rdc<=10000; Rdc+=100) {
-        for (let k=0; k<=20; k+=0.5) {
-          for (let exp=-10; exp<=-6; exp++) {
-            for (let frac=0; frac<5; frac++) {
-              let C = Math.pow(10, exp + frac/5.0);
-              let preds=[], err=0;
-              for (let i=0; i<freqs.length; i++) {
-                let [Zp] = modelComponents(freqs[i], Rdc, k, C);
-                preds.push(Zp);
-                err += Math.pow(Z_meas[i]-Zp,2);
-              }
-              if (err < bestErr) {
-                bestErr = err;
-                best = [Rdc,k,C];
-                bestPred = preds;
-              }
+  // Rdc: 1 Ω .. 10 MΩ
+  for (let exp=0; exp<=7; exp++) {
+    for (let mul=1; mul<10; mul++) {
+      let Rdc = mul * Math.pow(10, exp);
+
+      // k: 0 .. 20 Ω/√Hz
+      for (let k=0; k<=20; k+=0.5) {
+        // Capacitance: 1e-10 .. 1e-6 F
+        for (let expC=-10; expC<=-6; expC++) {
+          for (let frac=0; frac<5; frac++) {
+            let C = Math.pow(10, expC + frac/5.0);
+
+            let preds=[], err=0;
+            for (let i=0; i<freqs.length; i++) {
+              let [Zp] = modelComponents(freqs[i], Rdc, k, C);
+              preds.push(Zp);
+              err += Math.pow(Z_meas[i]-Zp,2);
+            }
+
+            if (err < bestErr) {
+              bestErr = err;
+              best = [Rdc,k,C];
+              bestPred = preds;
             }
           }
         }
       }
-      return [best, bestPred, Z_meas, bestErr];
     }
+  }
+
+  return [best, bestPred, Z_meas, bestErr];
+}
 
     function compute() {
       try {
