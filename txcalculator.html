@@ -1,262 +1,136 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>EMF Transmitter Calculator</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TXCalc UI (parent)</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 10px;
-      background: #fdfdfd;
-    }
-    h2 {
-      text-align: center;
-      margin-bottom: 15px;
-    }
-    .block {
-      margin-bottom: 18px;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      background: #fafafa;
-    }
-    .block label {
-      display: block;
-      margin-top: 6px;
-      font-size: 14px;
-    }
-    .block input, .block select {
-      width: 100%;
-      padding: 6px;
-      margin-top: 2px;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-    button {
-      padding: 10px 14px;
-      margin: 6px 6px 0 0;
-      font-size: 15px;
-      border: none;
-      border-radius: 5px;
-      background: #007cba;
-      color: white;
-    }
-    button:hover { background: #005f8c; }
-    #output {
-      margin-top: 15px;
-      width: 100%;
-      height: 300px;
-      font-family: monospace;
-      font-size: 12px;
-      white-space: pre;
-      border: 1px solid #ccc;
-      padding: 8px;
-      overflow-x: auto;
-      overflow-y: scroll;
-      background: #fff;
-      box-sizing: border-box;
-    }
+    body{font-family:Arial;margin:12px}
+    .block{margin-bottom:12px;padding:8px;border:1px solid #ddd;border-radius:6px;background:#fafafa}
+    label{display:block;margin-top:6px}
+    input,select{width:100%;padding:6px;margin-top:4px;box-sizing:border-box}
+    button{padding:10px 12px;margin:6px 6px 0 0;background:#007cba;color:#fff;border:none;border-radius:6px}
+    pre{white-space:pre-wrap;background:#fff;border:1px solid #ccc;padding:8px;overflow:auto}
+    /* hide iframe */
+    #calcFrame{display:none}
   </style>
 </head>
 <body>
-  <h2>EMF Transmitter Calculator</h2>
-
-<p id="instructions">
-  Enter frequency values (or choose from dropdowns). For each frequency, you may enter
-  either the measured impedance |Z|, or voltage and current values (V and mA).  
-  If |Z| is provided, it will override V and I.  
-  Adjust capacitance per foot or known length if applicable.  
-</p>
-
-  <!-- Frequency 1 -->
+  <h2>TXCalc UI</h2>
   <div class="block">
-    <label>Freq1 (Hz):</label>
-    <input id="f1" value="512">
-    <select onchange="document.getElementById('f1').value=this.value">
-      <option value="">--select--</option>
-      <option>220</option><option>512</option><option>940</option>
-      <option>4096</option><option>8102</option><option>32768</option>
-      <option>65536</option><option>83100</option>
-      <option>131072</option><option>200100</option>
+    <label>Freq1 (Hz)</label>
+    <input id="f1" value="512"><select onchange="f1.value=this.value">
+      <option></option><option>220</option><option>512</option><option>940</option><option>4096</option><option>8102</option><option>32768</option><option>65536</option><option>83100</option><option>131072</option><option>200100</option>
     </select>
-    <label>|Z| meas (Ω, optional):</label><input id="z1">
-    <label>V1 (V):</label><input id="v1" value="30">
-    <label>I1 (mA):</label><input id="i1">
+    <label>|Z| meas (Ω, optional)</label><input id="z1">
+    <label>V1 (V)</label><input id="v1" value="30">
+    <label>I1 (mA)</label><input id="i1">
   </div>
 
-  <!-- Frequency 2 -->
   <div class="block">
-    <label>Freq2 (Hz):</label>
-    <input id="f2" value="8192">
-    <select onchange="document.getElementById('f2').value=this.value">
-      <option value="">--select--</option>
-      <option>220</option><option>512</option><option>940</option>
-      <option>4096</option><option>8102</option><option>32768</option>
-      <option>65536</option><option>83100</option>
-      <option>131072</option><option>200100</option>
+    <label>Freq2 (Hz)</label>
+    <input id="f2" value="8192"><select onchange="f2.value=this.value">
+      <option></option><option>220</option><option>512</option><option>940</option><option>4096</option><option>8102</option><option>32768</option><option>65536</option><option>83100</option><option>131072</option><option>200100</option>
     </select>
-    <label>|Z| meas (Ω, optional):</label><input id="z2">
-    <label>V2 (V):</label><input id="v2" value="30">
-    <label>I2 (mA):</label><input id="i2">
+    <label>|Z| meas (Ω, optional)</label><input id="z2">
+    <label>V2 (V)</label><input id="v2" value="30">
+    <label>I2 (mA)</label><input id="i2">
   </div>
 
-  <!-- Frequency 3 -->
   <div class="block">
-    <label>Freq3 (Hz):</label>
-    <input id="f3" value="32768">
-    <select onchange="document.getElementById('f3').value=this.value">
-      <option value="">--select--</option>
-      <option>220</option><option>512</option><option>940</option>
-      <option>4096</option><option>8102</option><option>32768</option>
-      <option>65536</option><option>83100</option>
-      <option>131072</option><option>200100</option>
+    <label>Freq3 (Hz)</label>
+    <input id="f3" value="32768"><select onchange="f3.value=this.value">
+      <option></option><option>220</option><option>512</option><option>940</option><option>4096</option><option>8102</option><option>32768</option><option>65536</option><option>83100</option><option>131072</option><option>200100</option>
     </select>
-    <label>|Z| meas (Ω, optional):</label><input id="z3">
-    <label>V3 (V):</label><input id="v3" value="30">
-    <label>I3 (mA):</label><input id="i3">
+    <label>|Z| meas (Ω, optional)</label><input id="z3">
+    <label>V3 (V)</label><input id="v3" value="30">
+    <label>I3 (mA)</label><input id="i3">
   </div>
 
-  <!-- Extra inputs -->
   <div class="block">
-    <label>Capacitance per ft (nF/ft):</label>
-    <input id="cperft" value="0.06">
-    <label>Known length (ft, optional):</label>
-    <input id="lenft">
+    <label>Capacitance per ft (nF/ft)</label><input id="cperft" value="0.07">
+    <label>Known length (ft, optional)</label><input id="lenft">
   </div>
 
-  <div>
-    <button onclick="compute()">Compute</button>
-    <button onclick="clearAll()">Clear</button>
-    <button onclick="copyResults()">Copy Results</button>
-  </div>
+  <button id="computeBtn">Compute (via calc.html)</button>
+  <button id="clearBtn">Clear</button>
+  <button id="copyBtn">Copy Results</button>
 
-  <pre id="output"></pre>
+  <h3>Results</h3>
+  <pre id="output">No results yet. Press Compute.</pre>
+
+  <!-- Hidden iframe hosting the calculator page (same-origin) -->
+  <iframe id="calcFrame" src="calc.html" title="calculator"></iframe>
 
   <script>
-    function modelComponents(f, Rdc, k, C) {
-      let w = 2 * Math.PI * f;
-      let R_eff = Rdc + k * Math.sqrt(f);
-      let Xc = (C > 0) ? 1.0 / (w * C) : 1e9;
-      let Zmag = (R_eff * Xc) / Math.sqrt(R_eff * R_eff + Xc * Xc);
-      return [Zmag, R_eff, Xc];
+    // prefer same origin
+    const iframe = document.getElementById('calcFrame');
+    const output = document.getElementById('output');
+
+    // build payload from UI, prefer |Z| if present
+    function gatherInputs(){
+      const freqs = [];
+      const Zs = [];
+      for(let i=1;i<=3;i++){
+        const f = parseFloat(document.getElementById('f'+i).value);
+        const z = document.getElementById('z'+i).value.trim();
+        const v = document.getElementById('v'+i).value.trim();
+        const im = document.getElementById('i'+i).value.trim();
+        freqs.push(f || 0);
+        if(z!=='') Zs.push(parseFloat(z));
+        else if(v!=='' && im!=='') Zs.push(parseFloat(v)/(parseFloat(im)/1000.0));
+        else Zs.push(null); // will be validated by calc.html
+      }
+      const userC = parseFloat(document.getElementById('cperft').value) || 0.07;
+      const knownLen = parseFloat(document.getElementById('lenft').value) || 0;
+      return { freqs, Zs, userC, knownLen };
     }
 
-    function fitParams(freqs, Z_meas) {
-      let bestErr = 1e99;
-      let best = [0,0,0];
-      let bestPred = [];
-
-      // Rdc: 1 Ω .. 10 MΩ (logarithmic stepping)
-      for (let exp=0; exp<=7; exp++) {
-        for (let mul=1; mul<10; mul++) {
-          let Rdc = mul * Math.pow(10, exp);
-
-          // k: 0 .. 20 Ω/√Hz
-          for (let k=0; k<=20; k+=0.5) {
-            // Capacitance: 1e-10 .. 1e-6 F
-            for (let expC=-10; expC<=-6; expC++) {
-              for (let frac=0; frac<5; frac++) {
-                let C = Math.pow(10, expC + frac/5.0);
-
-                let preds=[], err=0;
-                for (let i=0; i<freqs.length; i++) {
-                  let [Zp] = modelComponents(freqs[i], Rdc, k, C);
-                  preds.push(Zp);
-                  err += Math.pow(Z_meas[i]-Zp,2);
-                }
-
-                if (err < bestErr) {
-                  bestErr = err;
-                  best = [Rdc,k,C];
-                  bestPred = preds;
-                }
-              }
-            }
-          }
+    // send compute request
+    document.getElementById('computeBtn').addEventListener('click', ()=> {
+      const payload = gatherInputs();
+      // basic validation
+      for(let i=0;i<3;i++){
+        if(!payload.freqs[i] || payload.Zs[i]===null){
+          alert('Fill frequency and either |Z| or V+I for each test row.');
+          return;
         }
       }
-      return [best, bestPred, bestErr];
-    }
+      // postMessage to iframe, use same origin for safety (window.location.origin)
+      iframe.contentWindow.postMessage({type:'compute', data: payload}, window.location.origin);
+      output.textContent = 'Calculating...';
+    });
 
-    function compute() {
-      try {
-        let freqs=[+f1.value, +f2.value, +f3.value];
-        let Z_meas = [];
-
-        for (let i=0; i<3; i++) {
-          let zBox = document.getElementById(`z${i+1}`).value;
-          if (zBox) {
-            Z_meas.push(parseFloat(zBox));
-          } else {
-            let V = parseFloat(document.getElementById(`v${i+1}`).value);
-            let I = parseFloat(document.getElementById(`i${i+1}`).value);
-            if (V && I) {
-              Z_meas.push(V / (I/1000.0));
-            } else {
-              throw "Need either |Z| or both V and I for each frequency";
-            }
-          }
-        }
-
-        let [best, Zpred, err] = fitParams(freqs,Z_meas);
-        let [Rdc,k,C] = best;
-
-        let user_C_nF = parseFloat(cperft.value) || 0.06;
-        let user_C_per_ft = user_C_nF * 1e-9;
-        let known_len = parseFloat(lenft.value) || 0;
-
-        let R_PER_FT = 0.00159;
-        let len_R = Rdc/R_PER_FT;
-        let len_C = (user_C_per_ft>0) ? C/user_C_per_ft : 0;
-
-        let out=[];
-        out.push("=== RC + Skin Fit ===");
-        out.push(`R_dc ≈ ${Rdc.toFixed(1)} Ω`);
-        out.push(`Skin coeff k ≈ ${k.toFixed(2)} Ω/√Hz`);
-        out.push(`C ≈ ${C.toExponential(3)} F  (${(C*1e9).toFixed(2)} nF total)`);
-        out.push(`Residual error ≈ ${err.toExponential(3)}`);
-        out.push("");
-        out.push("=== Frequency Breakdown ===");
-        out.push("Freq(Hz) |Z| meas  |Z| pred");
-        out.push("-----------------------------------");
-        for (let i=0;i<freqs.length;i++) {
-          out.push(`${freqs[i].toFixed(0).padEnd(8)} ${Z_meas[i].toFixed(1).padEnd(8)} ${Zpred[i].toFixed(1)}`);
-        }
-        out.push("");
-        out.push("=== Line Length Estimates ===");
-        out.push(`From Rdc (~#12 Cu): ${len_R.toFixed(0)} ft (${(len_R/5280).toFixed(2)} miles)`);
-        out.push(`From C (using ${user_C_nF} nF/ft): ${len_C.toFixed(0)} ft (${(len_C/5280).toFixed(2)} miles)`);
-
-        if (known_len > 0) {
-          let C_per_ft_fit = (C/known_len)*1e9;
-          let R_per_ft_fit = Rdc/known_len;
-          out.push("");
-          out.push("=== With Known Length Input ===");
-          out.push(`Known length: ${known_len.toFixed(0)} ft`);
-          out.push(`Fitted C per ft: ${C_per_ft_fit.toFixed(3)} nF/ft`);
-          out.push(`Fitted R per ft: ${R_per_ft_fit.toFixed(4)} Ω/ft`);
-        }
-
-        output.textContent = out.join("\n");
-      } catch (e) {
-        output.textContent = "Error: " + e;
+    // receive result messages from calc.html
+    window.addEventListener('message', (ev)=>{
+      // security: accept only same origin
+      if(ev.origin !== window.location.origin) return;
+      const msg = ev.data;
+      if(!msg || !msg.type) return;
+      if(msg.type === 'result'){
+        // msg.data is plain text (formatted output)
+        output.textContent = msg.data;
+      } else if(msg.type === 'error') {
+        output.textContent = 'Error from calc: ' + msg.data;
       }
-    }
+    });
 
-    function clearAll() {
-      f1.value="512"; v1.value="30"; i1.value=""; z1.value="";
-      f2.value="8192"; v2.value="30"; i2.value=""; z2.value="";
-      f3.value="32768"; v3.value="30"; i3.value=""; z3.value="";
-      cperft.value="0.07"; lenft.value="";
-      output.textContent="";
-    }
+    document.getElementById('clearBtn').addEventListener('click', ()=>{
+      ['f1','v1','i1','z1','f2','v2','i2','z2','f3','v3','i3','z3','cperft','lenft'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(!el) return;
+        if(id==='f1') el.value='512';
+        else if(id==='f2') el.value='8192';
+        else if(id==='f3') el.value='32768';
+        else if(id==='v1' || id==='v2' || id==='v3') el.value='30';
+        else el.value='';
+      });
+      output.textContent = 'Cleared.';
+    });
 
-    function copyResults() {
-      navigator.clipboard.writeText(output.textContent);
-      alert("Results copied to clipboard!");
-    }
+    document.getElementById('copyBtn').addEventListener('click', ()=>{
+      navigator.clipboard.writeText(output.textContent).then(()=>alert('Copied'));
+    });
   </script>
 </body>
 </html>
