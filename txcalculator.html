@@ -3,9 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>TXCalc UI (parent)</title>
+  <title>EMF Transmitter Calculator (parent)</title>
   <style>
     body{font-family:Arial;margin:12px}
+    h2{text-align:center;margin-bottom:8px}
+    #instructions{font-size:14px;color:#333;margin:0 0 12px 0;line-height:1.4}
     .block{margin-bottom:12px;padding:8px;border:1px solid #ddd;border-radius:6px;background:#fafafa}
     label{display:block;margin-top:6px}
     input,select{width:100%;padding:6px;margin-top:4px;box-sizing:border-box}
@@ -16,10 +18,20 @@
   </style>
 </head>
 <body>
-  <h2>TXCalc UI</h2>
+  <h2>EMF Transmitter Calculator</h2>
+
+  <!-- Your normal-sized instructions paragraph -->
+  <p id="instructions">
+    Enter frequency values (or choose from dropdowns). For each frequency, you may enter
+    either the measured impedance |Z|, or voltage and current values (V and mA).
+    If |Z| is provided, it will override V and I.
+    Adjust capacitance per foot or known length if applicable.
+  </p>
+
   <div class="block">
     <label>Freq1 (Hz)</label>
-    <input id="f1" value="512"><select onchange="f1.value=this.value">
+    <input id="f1" value="512">
+    <select onchange="f1.value=this.value">
       <option></option><option>220</option><option>512</option><option>940</option><option>4096</option><option>8102</option><option>32768</option><option>65536</option><option>83100</option><option>131072</option><option>200100</option>
     </select>
     <label>|Z| meas (Ω, optional)</label><input id="z1">
@@ -29,7 +41,8 @@
 
   <div class="block">
     <label>Freq2 (Hz)</label>
-    <input id="f2" value="8192"><select onchange="f2.value=this.value">
+    <input id="f2" value="8192">
+    <select onchange="f2.value=this.value">
       <option></option><option>220</option><option>512</option><option>940</option><option>4096</option><option>8102</option><option>32768</option><option>65536</option><option>83100</option><option>131072</option><option>200100</option>
     </select>
     <label>|Z| meas (Ω, optional)</label><input id="z2">
@@ -39,7 +52,8 @@
 
   <div class="block">
     <label>Freq3 (Hz)</label>
-    <input id="f3" value="32768"><select onchange="f3.value=this.value">
+    <input id="f3" value="32768">
+    <select onchange="f3.value=this.value">
       <option></option><option>220</option><option>512</option><option>940</option><option>4096</option><option>8102</option><option>32768</option><option>65536</option><option>83100</option><option>131072</option><option>200100</option>
     </select>
     <label>|Z| meas (Ω, optional)</label><input id="z3">
@@ -48,13 +62,15 @@
   </div>
 
   <div class="block">
-    <label>Capacitance per ft (nF/ft)</label><input id="cperft" value="0.06">
+    <label>Capacitance per ft (nF/ft)</label><input id="cperft" value="0.07">
     <label>Known length (ft, optional)</label><input id="lenft">
   </div>
 
-  <button id="computeBtn">Compute (via calc.html)</button>
-  <button id="clearBtn">Clear</button>
-  <button id="copyBtn">Copy Results</button>
+  <div>
+    <button id="computeBtn">Compute (via calc.html)</button>
+    <button id="clearBtn">Clear</button>
+    <button id="copyBtn">Copy Results</button>
+  </div>
 
   <h3>Results</h3>
   <pre id="output">No results yet. Press Compute.</pre>
@@ -63,11 +79,9 @@
   <iframe id="calcFrame" src="calc.html" title="calculator"></iframe>
 
   <script>
-    // prefer same origin
     const iframe = document.getElementById('calcFrame');
     const output = document.getElementById('output');
 
-    // build payload from UI, prefer |Z| if present
     function gatherInputs(){
       const freqs = [];
       const Zs = [];
@@ -79,36 +93,30 @@
         freqs.push(f || 0);
         if(z!=='') Zs.push(parseFloat(z));
         else if(v!=='' && im!=='') Zs.push(parseFloat(v)/(parseFloat(im)/1000.0));
-        else Zs.push(null); // will be validated by calc.html
+        else Zs.push(null);
       }
       const userC = parseFloat(document.getElementById('cperft').value) || 0.07;
       const knownLen = parseFloat(document.getElementById('lenft').value) || 0;
       return { freqs, Zs, userC, knownLen };
     }
 
-    // send compute request
     document.getElementById('computeBtn').addEventListener('click', ()=> {
       const payload = gatherInputs();
-      // basic validation
       for(let i=0;i<3;i++){
         if(!payload.freqs[i] || payload.Zs[i]===null){
           alert('Fill frequency and either |Z| or V+I for each test row.');
           return;
         }
       }
-      // postMessage to iframe, use same origin for safety (window.location.origin)
       iframe.contentWindow.postMessage({type:'compute', data: payload}, window.location.origin);
       output.textContent = 'Calculating...';
     });
 
-    // receive result messages from calc.html
     window.addEventListener('message', (ev)=>{
-      // security: accept only same origin
       if(ev.origin !== window.location.origin) return;
       const msg = ev.data;
       if(!msg || !msg.type) return;
       if(msg.type === 'result'){
-        // msg.data is plain text (formatted output)
         output.textContent = msg.data;
       } else if(msg.type === 'error') {
         output.textContent = 'Error from calc: ' + msg.data;
