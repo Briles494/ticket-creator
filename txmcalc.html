@@ -9,7 +9,6 @@
     body {
       font-family: Arial, sans-serif;
       margin: 10px;
-      padding: 0;
       background: #fdfdfd;
     }
     h2 {
@@ -44,9 +43,7 @@
       background: #007cba;
       color: white;
     }
-    button:hover {
-      background: #005f8c;
-    }
+    button:hover { background: #005f8c; }
     #output {
       margin-top: 15px;
       width: 100%;
@@ -66,6 +63,13 @@
 <body>
   <h2>EMF Transmitter Calculator</h2>
 
+<p id="instructions">
+  Enter frequency values (or choose from dropdowns). For each frequency, you may enter
+  either the measured impedance |Z|, or voltage and current values (V and mA).  
+  If |Z| is provided, it will override V and I.  
+  Adjust capacitance per foot or known length if applicable.  
+</p>
+
   <!-- Frequency 1 -->
   <div class="block">
     <label>Freq1 (Hz):</label>
@@ -77,6 +81,7 @@
       <option>65536</option><option>83100</option>
       <option>131072</option><option>200100</option>
     </select>
+    <label>|Z| meas (Ω, optional):</label><input id="z1">
     <label>V1 (V):</label><input id="v1" value="30">
     <label>I1 (mA):</label><input id="i1">
   </div>
@@ -92,6 +97,7 @@
       <option>65536</option><option>83100</option>
       <option>131072</option><option>200100</option>
     </select>
+    <label>|Z| meas (Ω, optional):</label><input id="z2">
     <label>V2 (V):</label><input id="v2" value="30">
     <label>I2 (mA):</label><input id="i2">
   </div>
@@ -107,6 +113,7 @@
       <option>65536</option><option>83100</option>
       <option>131072</option><option>200100</option>
     </select>
+    <label>|Z| meas (Ω, optional):</label><input id="z3">
     <label>V3 (V):</label><input id="v3" value="30">
     <label>I3 (mA):</label><input id="i3">
   </div>
@@ -114,7 +121,7 @@
   <!-- Extra inputs -->
   <div class="block">
     <label>Capacitance per ft (nF/ft):</label>
-    <input id="cperft" value="0.051">
+    <input id="cperft" value="0.06">
     <label>Known length (ft, optional):</label>
     <input id="lenft">
   </div>
@@ -136,55 +143,67 @@
       return [Zmag, R_eff, Xc];
     }
 
-    function fitParams(freqs, volts, mamps) {
-  let Z_meas = freqs.map((f, i) => volts[i] / (mamps[i] / 1000));
-  let bestErr = 1e99;
-  let best = [0,0,0];
-  let bestPred = [];
+    function fitParams(freqs, Z_meas) {
+      let bestErr = 1e99;
+      let best = [0,0,0];
+      let bestPred = [];
 
-  // Rdc: 1 Ω .. 10 MΩ
-  for (let exp=0; exp<=7; exp++) {
-    for (let mul=1; mul<10; mul++) {
-      let Rdc = mul * Math.pow(10, exp);
+      // Rdc: 1 Ω .. 10 MΩ (logarithmic stepping)
+      for (let exp=0; exp<=7; exp++) {
+        for (let mul=1; mul<10; mul++) {
+          let Rdc = mul * Math.pow(10, exp);
 
-      // k: 0 .. 20 Ω/√Hz
-      for (let k=0; k<=20; k+=0.5) {
-        // Capacitance: 1e-10 .. 1e-6 F
-        for (let expC=-10; expC<=-6; expC++) {
-          for (let frac=0; frac<5; frac++) {
-            let C = Math.pow(10, expC + frac/5.0);
+          // k: 0 .. 20 Ω/√Hz
+          for (let k=0; k<=20; k+=0.5) {
+            // Capacitance: 1e-10 .. 1e-6 F
+            for (let expC=-10; expC<=-6; expC++) {
+              for (let frac=0; frac<5; frac++) {
+                let C = Math.pow(10, expC + frac/5.0);
 
-            let preds=[], err=0;
-            for (let i=0; i<freqs.length; i++) {
-              let [Zp] = modelComponents(freqs[i], Rdc, k, C);
-              preds.push(Zp);
-              err += Math.pow(Z_meas[i]-Zp,2);
-            }
+                let preds=[], err=0;
+                for (let i=0; i<freqs.length; i++) {
+                  let [Zp] = modelComponents(freqs[i], Rdc, k, C);
+                  preds.push(Zp);
+                  err += Math.pow(Z_meas[i]-Zp,2);
+                }
 
-            if (err < bestErr) {
-              bestErr = err;
-              best = [Rdc,k,C];
-              bestPred = preds;
+                if (err < bestErr) {
+                  bestErr = err;
+                  best = [Rdc,k,C];
+                  bestPred = preds;
+                }
+              }
             }
           }
         }
       }
+      return [best, bestPred, bestErr];
     }
-  }
-
-  return [best, bestPred, Z_meas, bestErr];
-}
 
     function compute() {
       try {
         let freqs=[+f1.value, +f2.value, +f3.value];
-        let volts=[+v1.value, +v2.value, +v3.value];
-        let mamps=[+i1.value, +i2.value, +i3.value];
+        let Z_meas = [];
 
-        let [best, Zpred, Zmeas, err] = fitParams(freqs,volts,mamps);
+        for (let i=0; i<3; i++) {
+          let zBox = document.getElementById(`z${i+1}`).value;
+          if (zBox) {
+            Z_meas.push(parseFloat(zBox));
+          } else {
+            let V = parseFloat(document.getElementById(`v${i+1}`).value);
+            let I = parseFloat(document.getElementById(`i${i+1}`).value);
+            if (V && I) {
+              Z_meas.push(V / (I/1000.0));
+            } else {
+              throw "Need either |Z| or both V and I for each frequency";
+            }
+          }
+        }
+
+        let [best, Zpred, err] = fitParams(freqs,Z_meas);
         let [Rdc,k,C] = best;
 
-        let user_C_nF = parseFloat(cperft.value) || 0.051;
+        let user_C_nF = parseFloat(cperft.value) || 0.06;
         let user_C_per_ft = user_C_nF * 1e-9;
         let known_len = parseFloat(lenft.value) || 0;
 
@@ -200,11 +219,10 @@
         out.push(`Residual error ≈ ${err.toExponential(3)}`);
         out.push("");
         out.push("=== Frequency Breakdown ===");
-        out.push("Freq(Hz) |Z| meas  |Z| pred  R_eff   Xc");
-        out.push("----------------------------------------------");
+        out.push("Freq(Hz) |Z| meas  |Z| pred");
+        out.push("-----------------------------------");
         for (let i=0;i<freqs.length;i++) {
-          let [Zp,R_eff,Xc] = modelComponents(freqs[i],Rdc,k,C);
-          out.push(`${freqs[i].toFixed(0).padEnd(8)} ${Zmeas[i].toFixed(1).padEnd(8)} ${Zpred[i].toFixed(1).padEnd(8)} ${R_eff.toFixed(1).padEnd(7)} ${Xc.toFixed(1)}`);
+          out.push(`${freqs[i].toFixed(0).padEnd(8)} ${Z_meas[i].toFixed(1).padEnd(8)} ${Zpred[i].toFixed(1)}`);
         }
         out.push("");
         out.push("=== Line Length Estimates ===");
@@ -228,9 +246,9 @@
     }
 
     function clearAll() {
-      f1.value="512"; v1.value="30"; i1.value="";
-      f2.value="8192"; v2.value="30"; i2.value="";
-      f3.value="32768"; v3.value="30"; i3.value="";
+      f1.value="512"; v1.value="30"; i1.value=""; z1.value="";
+      f2.value="8192"; v2.value="30"; i2.value=""; z2.value="";
+      f3.value="32768"; v3.value="30"; i3.value=""; z3.value="";
       cperft.value="0.07"; lenft.value="";
       output.textContent="";
     }
