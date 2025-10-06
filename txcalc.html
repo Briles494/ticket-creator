@@ -44,72 +44,90 @@
   <h2>emf transmitter calculator</h2>
 
   <!-- Frequency 1 set -->
-<div class="input-row">
-  <label>Freq1 (Hz):</label>
-  <input id="f1" value="512">
-  <select onchange="document.getElementById('f1').value=this.value">
-    <option value="">--select--</option>
-    <option value="220">220</option>
-    <option value="512">512</option>
-    <option value="940">940</option>
-    <option value="4096">4096</option>
-    <option value="8102">8102</option>
-    <option value="32768">32768</option>
-    <option value="65536">65536</option>
-    <option value="83100">83100</option>
-    <option value="131072">131072</option>
-    <option value="200100">200100</option>
-  </select>
-  <label style="margin-left:15px;">V1 (V):</label>
-  <input id="v1" value="30">
-  <label style="margin-left:15px;">I1 (mA):</label>
-  <input id="i1">
+<div class="input-row" style="flex-direction: column; align-items: flex-start; margin-bottom:12px;">
+  <div>
+    <label>Freq1 (Hz):</label>
+    <input id="f1" value="512">
+    <select onchange="document.getElementById('f1').value=this.value">
+      <option value="">--select--</option>
+      <option value="220">220</option>
+      <option value="512">512</option>
+      <option value="940">940</option>
+      <option value="4096">4096</option>
+      <option value="8102">8102</option>
+      <option value="32768">32768</option>
+      <option value="65536">65536</option>
+      <option value="83100">83100</option>
+      <option value="131072">131072</option>
+      <option value="200100">200100</option>
+    </select>
+  </div>
+  <div style="margin-top:6px;">
+    <label>V1 (V):</label>
+    <input id="v1" value="30">
+  </div>
+  <div style="margin-top:6px;">
+    <label>I1 (mA):</label>
+    <input id="i1">
+  </div>
 </div>
 
 <!-- Frequency 2 set -->
-<div class="input-row">
-  <label>Freq2 (Hz):</label>
-  <input id="f2" value="8192">
-  <select onchange="document.getElementById('f2').value=this.value">
-    <option value="">--select--</option>
-    <option value="220">220</option>
-    <option value="512">512</option>
-    <option value="940">940</option>
-    <option value="4096">4096</option>
-    <option value="8102">8102</option>
-    <option value="32768">32768</option>
-    <option value="65536">65536</option>
-    <option value="83100">83100</option>
-    <option value="131072">131072</option>
-    <option value="200100">200100</option>
-  </select>
-  <label style="margin-left:15px;">V2 (V):</label>
-  <input id="v2" value="30">
-  <label style="margin-left:15px;">I2 (mA):</label>
-  <input id="i2">
+<div class="input-row" style="flex-direction: column; align-items: flex-start; margin-bottom:12px;">
+  <div>
+    <label>Freq2 (Hz):</label>
+    <input id="f2" value="8192">
+    <select onchange="document.getElementById('f2').value=this.value">
+      <option value="">--select--</option>
+      <option value="220">220</option>
+      <option value="512">512</option>
+      <option value="940">940</option>
+      <option value="4096">4096</option>
+      <option value="8102">8102</option>
+      <option value="32768">32768</option>
+      <option value="65536">65536</option>
+      <option value="83100">83100</option>
+      <option value="131072">131072</option>
+      <option value="200100">200100</option>
+    </select>
+  </div>
+  <div style="margin-top:6px;">
+    <label>V2 (V):</label>
+    <input id="v2" value="30">
+  </div>
+  <div style="margin-top:6px;">
+    <label>I2 (mA):</label>
+    <input id="i2">
+  </div>
 </div>
 
 <!-- Frequency 3 set -->
-<div class="input-row">
-  <label>Freq3 (Hz):</label>
-  <input id="f3" value="32768">
-  <select onchange="document.getElementById('f3').value=this.value">
-    <option value="">--select--</option>
-    <option value="220">220</option>
-    <option value="512">512</option>
-    <option value="940">940</option>
-    <option value="4096">4096</option>
-    <option value="8102">8102</option>
-    <option value="32768">32768</option>
-    <option value="65536">65536</option>
-    <option value="83100">83100</option>
-    <option value="131072">131072</option>
-    <option value="200100">200100</option>
-  </select>
-  <label style="margin-left:15px;">V3 (V):</label>
-  <input id="v3" value="30">
-  <label style="margin-left:15px;">I3 (mA):</label>
-  <input id="i3">
+<div class="input-row" style="flex-direction: column; align-items: flex-start; margin-bottom:12px;">
+  <div>
+    <label>Freq3 (Hz):</label>
+    <input id="f3" value="32768">
+    <select onchange="document.getElementById('f3').value=this.value">
+      <option value="">--select--</option>
+      <option value="220">220</option>
+      <option value="512">512</option>
+      <option value="940">940</option>
+      <option value="4096">4096</option>
+      <option value="8102">8102</option>
+      <option value="32768">32768</option>
+      <option value="65536">65536</option>
+      <option value="83100">83100</option>
+      <option value="131072">131072</option>
+      <option value="200100">200100</option>
+    </select>
+  </div>
+  <div style="margin-top:6px;">
+    <label>V3 (V):</label>
+    <input id="v3" value="30">
+  </div>
+  <div style="margin-top:6px;">
+    <label>I3 (mA):</label>
+    <input id="i3">
+  </div>
 </div>
 
   <div class="input-row"><label>Capacitance per ft (nF/ft):</label><input id="cperft" value="0.055"></div>
