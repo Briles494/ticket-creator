@@ -67,7 +67,7 @@
   </div>
 
   <div>
-    <button id="computeBtn">Compute (via calc.html)</button>
+    <button id="computeBtn">Compute</button>
     <button id="clearBtn">Clear</button>
     <button id="copyBtn">Copy Results</button>
   </div>
@@ -95,7 +95,7 @@
         else if(v!=='' && im!=='') Zs.push(parseFloat(v)/(parseFloat(im)/1000.0));
         else Zs.push(null);
       }
-      const userC = parseFloat(document.getElementById('cperft').value) || 0.07;
+      const userC = parseFloat(document.getElementById('cperft').value) || 0.06;
       const knownLen = parseFloat(document.getElementById('lenft').value) || 0;
       return { freqs, Zs, userC, knownLen };
     }
