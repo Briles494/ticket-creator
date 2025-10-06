@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TX Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+      padding: 0;
+      background: #fdfdfd;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .block {
+      margin-bottom: 18px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+    .block label {
+      display: block;
+      margin-top: 6px;
+      font-size: 14px;
+    }
+    .block input, .block select {
+      width: 100%;
+      padding: 6px;
+      margin-top: 2px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px 14px;
+      margin: 6px 6px 0 0;
+      font-size: 15px;
+      border: none;
+      border-radius: 5px;
+      background: #007cba;
+      color: white;
+    }
+    button:hover {
+      background: #005f8c;
+    }
+    #output {
+      margin-top: 15px;
+      width: 100%;
+      height: 300px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre;
+      border: 1px solid #ccc;
+      padding: 8px;
+      overflow-x: auto;
+      overflow-y: scroll;
+      background: #fff;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <h2>TX Calculator</h2>
+
+  <!-- Frequency 1 -->
+  <div class="block">
+    <label>Freq1 (Hz):</label>
+    <input id="f1" value="512">
+    <select onchange="document.getElementById('f1').value=this.value">
+      <option value="">--select--</option>
+      <option>220</option><option>512</option><option>940</option>
+      <option>4096</option><option>8102</option><option>32768</option>
+      <option>65536</option><option>83100</option>
+      <option>131072</option><option>200100</option>
+    </select>
+    <label>V1 (V):</label><input id="v1" value="30">
+    <label>I1 (mA):</label><input id="i1">
+  </div>
+
+  <!-- Frequency 2 -->
+  <div class="block">
+    <label>Freq2 (Hz):</label>
+    <input id="f2" value="8192">
+    <select onchange="document.getElementById('f2').value=this.value">
+      <option value="">--select--</option>
+      <option>220</option><option>512</option><option>940</option>
+      <option>4096</option><option>8102</option><option>32768</option>
+      <option>65536</option><option>83100</option>
+      <option>131072</option><option>200100</option>
+    </select>
+    <label>V2 (V):</label><input id="v2" value="30">
+    <label>I2 (mA):</label><input id="i2">
+  </div>
+
+  <!-- Frequency 3 -->
+  <div class="block">
+    <label>Freq3 (Hz):</label>
+    <input id="f3" value="32768">
+    <select onchange="document.getElementById('f3').value=this.value">
+      <option value="">--select--</option>
+      <option>220</option><option>512</option><option>940</option>
+      <option>4096</option><option>8102</option><option>32768</option>
+      <option>65536</option><option>83100</option>
+      <option>131072</option><option>200100</option>
+    </select>
+    <label>V3 (V):</label><input id="v3" value="30">
+    <label>I3 (mA):</label><input id="i3">
+  </div>
+
+  <!-- Extra inputs -->
+  <div class="block">
+    <label>Capacitance per ft (nF/ft):</label>
+    <input id="cperft" value="0.07">
+    <label>Known length (ft, optional):</label>
+    <input id="lenft">
+  </div>
+
+  <div>
+    <button onclick="compute()">Compute</button>
+    <button onclick="clearAll()">Clear</button>
+    <button onclick="copyResults()">Copy Results</button>
+  </div>
+
+  <pre id="output"></pre>
+
+  <script>
+    function modelComponents(f, Rdc, k, C) {
+      let w = 2 * Math.PI * f;
+      let R_eff = Rdc + k * Math.sqrt(f);
+      let Xc = (C > 0) ? 1.0 / (w * C) : 1e9;
+      let Zmag = (R_eff * Xc) / Math.sqrt(R_eff * R_eff + Xc * Xc);
+      return [Zmag, R_eff, Xc];
+    }
+
+    function fitParams(freqs, volts, mamps) {
+      let Z_meas = freqs.map((f, i) => volts[i] / (mamps[i] / 1000));
+      let bestErr = 1e99;
+      let best = [0,0,0];
+      let bestPred = [];
+
+      for (let Rdc=100; Rdc<=10000; Rdc+=100) {
+        for (let k=0; k<=20; k+=0.5) {
+          for (let exp=-10; exp<=-6; exp++) {
+            for (let frac=0; frac<5; frac++) {
+              let C = Math.pow(10, exp + frac/5.0);
+              let preds=[], err=0;
+              for (let i=0; i<freqs.length; i++) {
+                let [Zp] = modelComponents(freqs[i], Rdc, k, C);
+                preds.push(Zp);
+                err += Math.pow(Z_meas[i]-Zp,2);
+              }
+              if (err < bestErr) {
+                bestErr = err;
+                best = [Rdc,k,C];
+                bestPred = preds;
+              }
+            }
+          }
+        }
+      }
+      return [best, bestPred, Z_meas, bestErr];
+    }
+
+    function compute() {
+      try {
+        let freqs=[+f1.value, +f2.value, +f3.value];
+        let volts=[+v1.value, +v2.value, +v3.value];
+        let mamps=[+i1.value, +i2.value, +i3.value];
+
+        let [best, Zpred, Zmeas, err] = fitParams(freqs,volts,mamps);
+        let [Rdc,k,C] = best;
+
+        let user_C_nF = parseFloat(cperft.value) || 0.07;
+        let user_C_per_ft = user_C_nF * 1e-9;
+        let known_len = parseFloat(lenft.value) || 0;
+
+        let R_PER_FT = 0.00159;
+        let len_R = Rdc/R_PER_FT;
+        let len_C = (user_C_per_ft>0) ? C/user_C_per_ft : 0;
+
+        let out=[];
+        out.push("=== RC + Skin Fit ===");
+        out.push(`R_dc ≈ ${Rdc.toFixed(1)} Ω`);
+        out.push(`Skin coeff k ≈ ${k.toFixed(2)} Ω/√Hz`);
+        out.push(`C ≈ ${C.toExponential(3)} F  (${(C*1e9).toFixed(2)} nF total)`);
+        out.push(`Residual error ≈ ${err.toExponential(3)}`);
+        out.push("");
+        out.push("=== Frequency Breakdown ===");
+        out.push("Freq(Hz) |Z| meas  |Z| pred  R_eff   Xc");
+        out.push("----------------------------------------------");
+        for (let i=0;i<freqs.length;i++) {
+          let [Zp,R_eff,Xc] = modelComponents(freqs[i],Rdc,k,C);
+          out.push(`${freqs[i].toFixed(0).padEnd(8)} ${Zmeas[i].toFixed(1).padEnd(8)} ${Zpred[i].toFixed(1).padEnd(8)} ${R_eff.toFixed(1).padEnd(7)} ${Xc.toFixed(1)}`);
+        }
+        out.push("");
+        out.push("=== Line Length Estimates ===");
+        out.push(`From Rdc (~#12 Cu): ${len_R.toFixed(0)} ft (${(len_R/5280).toFixed(2)} miles)`);
+        out.push(`From C (using ${user_C_nF} nF/ft): ${len_C.toFixed(0)} ft (${(len_C/5280).toFixed(2)} miles)`);
+
+        if (known_len > 0) {
+          let C_per_ft_fit = (C/known_len)*1e9;
+          let R_per_ft_fit = Rdc/known_len;
+          out.push("");
+          out.push("=== With Known Length Input ===");
+          out.push(`Known length: ${known_len.toFixed(0)} ft`);
+          out.push(`Fitted C per ft: ${C_per_ft_fit.toFixed(3)} nF/ft`);
+          out.push(`Fitted R per ft: ${R_per_ft_fit.toFixed(4)} Ω/ft`);
+        }
+
+        output.textContent = out.join("\n");
+      } catch (e) {
+        output.textContent = "Error: " + e;
+      }
+    }
+
+    function clearAll() {
+      f1.value="512"; v1.value="30"; i1.value="";
+      f2.value="8192"; v2.value="30"; i2.value="";
+      f3.value="32768"; v3.value="30"; i3.value="";
+      cperft.value="0.07"; lenft.value="";
+      output.textContent="";
+    }
+
+    function copyResults() {
+      navigator.clipboard.writeText(output.textContent);
+      alert("Results copied to clipboard!");
+    }
+  </script>
+</body>
+</html>
