@@ -82,8 +82,7 @@
         out.push(`${freqs[i].toFixed(0).padEnd(8)} ${Zs[i].toFixed(1).padEnd(12)} ${Zpred[i].toFixed(1)}`);
       }
       out.push("");
-      out.push("=== Length Estimates ===");
-      out.push(`From Rdc (~#12 Cu): ${len_R.toFixed(0)} ft (${(len_R/5280).toFixed(2)} miles)`);
+      out.push("=== Length Estimate ===");
       out.push(`From C (using ${userC_nF} nF/ft): ${len_C.toFixed(0)} ft (${(len_C/5280).toFixed(2)} miles)`);
 
       if (knownLen > 0) {
