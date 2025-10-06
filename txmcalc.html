@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>TX Calculator</title>
+  <title>EMF Transmitter Calculator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <style>
@@ -64,7 +64,7 @@
   </style>
 </head>
 <body>
-  <h2>TX Calculator</h2>
+  <h2>EMF Transmitter Calculator</h2>
 
   <!-- Frequency 1 -->
   <div class="block">
@@ -114,7 +114,7 @@
   <!-- Extra inputs -->
   <div class="block">
     <label>Capacitance per ft (nF/ft):</label>
-    <input id="cperft" value="0.07">
+    <input id="cperft" value="0.051">
     <label>Known length (ft, optional):</label>
     <input id="lenft">
   </div>
@@ -174,7 +174,7 @@
         let [best, Zpred, Zmeas, err] = fitParams(freqs,volts,mamps);
         let [Rdc,k,C] = best;
 
-        let user_C_nF = parseFloat(cperft.value) || 0.07;
+        let user_C_nF = parseFloat(cperft.value) || 0.051;
         let user_C_per_ft = user_C_nF * 1e-9;
         let known_len = parseFloat(lenft.value) || 0;
 
