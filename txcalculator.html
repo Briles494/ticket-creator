@@ -79,31 +79,48 @@
   <iframe id="calcFrame" src="calc.html" title="calculator"></iframe>
 
   <script>
-    const iframe = document.getElementById('calcFrame');
-    const output = document.getElementById('output');
-
     function gatherInputs(){
       const freqs = [];
       const Zs = [];
-      for(let i=1;i<=3;i++){
-        const f = parseFloat(document.getElementById('f'+i).value);
-        const z = document.getElementById('z'+i).value.trim();
-        const v = document.getElementById('v'+i).value.trim();
-        const im = document.getElementById('i'+i).value.trim();
+      for (let i = 1; i <= 3; i++) {
+        const f = parseFloat(document.getElementById('f' + i).value);
+
+        let zRaw = document.getElementById('z' + i).value.trim();
+        let vRaw = document.getElementById('v' + i).value.trim();
+        let iRaw = document.getElementById('i' + i).value.trim();
+
+        let zVal = null;
+
+        if (zRaw !== '') {
+          let val = parseFloat(zRaw);
+          if (!isFinite(val) || val <= 0) val = 0.001;   // clamp 0 Ω → 0.001
+          zVal = val;
+        } else if (vRaw !== '' && iRaw !== '') {
+          let volts = parseFloat(vRaw);
+          let milliamps = parseFloat(iRaw);
+          if (!isFinite(volts) || volts <= 0) volts = 0.001;       // clamp 0 V
+          if (!isFinite(milliamps) || milliamps <= 0) milliamps = 0.001; // clamp 0 mA
+          let calcZ = volts / (milliamps / 1000.0);
+          if (!isFinite(calcZ) || calcZ <= 0) calcZ = 0.001;
+          zVal = calcZ;
+        }
+
         freqs.push(f || 0);
-        if(z!=='') Zs.push(parseFloat(z));
-        else if(v!=='' && im!=='') Zs.push(parseFloat(v)/(parseFloat(im)/1000.0));
-        else Zs.push(null);
+        Zs.push(zVal);
       }
-      const userC = parseFloat(document.getElementById('cperft').value) || 0.06;
-      const knownLen = parseFloat(document.getElementById('lenft').value) || 0;
+
+      let userC = parseFloat(document.getElementById('cperft').value);
+      if (!isFinite(userC) || userC <= 0) userC = 0.06;  // keep your default
+      let knownLen = parseFloat(document.getElementById('lenft').value);
+      if (!isFinite(knownLen) || knownLen < 0) knownLen = 0;
+
       return { freqs, Zs, userC, knownLen };
     }
 
     document.getElementById('computeBtn').addEventListener('click', ()=> {
       const payload = gatherInputs();
-      for(let i=0;i<3;i++){
-        if(!payload.freqs[i] || payload.Zs[i]===null){
+      for (let i = 0; i < 3; i++) {
+        if (!payload.freqs[i] || payload.Zs[i] === null) {
           alert('Fill frequency and either |Z| or V+I for each test row.');
           return;
         }
@@ -139,6 +156,6 @@
     document.getElementById('copyBtn').addEventListener('click', ()=>{
       navigator.clipboard.writeText(output.textContent).then(()=>alert('Copied'));
     });
-  </script>
+</script>
 </body>
 </html>
