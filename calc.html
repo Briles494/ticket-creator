@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>TXCalc Engine</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body>
+<script>
+  // Basic model functions (same as before). Keep this file separate so you can obfuscate it later.
+  function modelComponents(f, Rdc, k, C) {
+    const w = 2 * Math.PI * f;
+    const R_eff = Rdc + k * Math.sqrt(f);
+    const Xc = (C > 0) ? 1.0 / (w * C) : 1e9;
+    const Zmag = (R_eff * Xc) / Math.sqrt(R_eff * R_eff + Xc * Xc);
+    return [Zmag, R_eff, Xc];
+  }
+
+  function fitParams(freqs, Z_meas) {
+    let bestErr = Number.POSITIVE_INFINITY;
+    let best = [0,0,0];
+    let bestPred = [];
+
+    // Rdc: 1 Ω .. 10 MΩ (log stepping)
+    for (let exp=0; exp<=7; exp++) {
+      for (let mul=1; mul<10; mul++) {
+        const Rdc = mul * Math.pow(10, exp);
+        for (let k=0; k<=20; k+=0.5) {
+          for (let expC=-10; expC<=-6; expC++) {
+            for (let frac=0; frac<5; frac++) {
+              const C = Math.pow(10, expC + frac/5.0);
+              let err = 0;
+              let preds = [];
+              for (let i=0;i<freqs.length;i++){
+                const [Zp] = modelComponents(freqs[i], Rdc, k, C);
+                preds.push(Zp);
+                const d = Z_meas[i] - Zp;
+                err += d*d;
+              }
+              if (err < bestErr) {
+                bestErr = err;
+                best = [Rdc, k, C];
+                bestPred = preds;
+              }
+            }
+          }
+        }
+      }
+    }
+    return {best, bestPred, bestErr};
+  }
+
+  // compute handler: builds output string and posts back
+  function handleCompute(data, sourceOrigin, sourceWindow) {
+    try {
+      const freqs = data.freqs;
+      const Zs = data.Zs;
+      const userC_nF = data.userC;
+      const knownLen = data.knownLen || 0;
+      // run fit
+      const res = fitParams(freqs, Zs);
+      const [Rdc,k,C] = res.best;
+      const Zpred = res.bestPred;
+      const R_PER_FT = 0.00159;
+      const len_R = Rdc / R_PER_FT;
+      const user_C_per_ft = userC_nF * 1e-9;
+      const len_C = (user_C_per_ft>0) ? C / user_C_per_ft : 0;
+
+      // build text result
+      let out = [];
+      out.push("=== RC + Skin Fit ===");
+      out.push(`R_dc ≈ ${Rdc.toFixed(1)} Ω`);
+      out.push(`Skin k ≈ ${k.toFixed(3)} Ω/√Hz`);
+      out.push(`C ≈ ${C.toExponential(3)} F  (${(C*1e9).toFixed(3)} nF total)`);
+      out.push(`Residual err ≈ ${res.bestErr.toExponential(3)}`);
+      out.push("");
+      out.push("=== Frequency Breakdown ===");
+      out.push("Freq(Hz) |Z meas (Ω) |Z pred (Ω)");
+      out.push("----------------------------------");
+      for (let i=0;i<freqs.length;i++){
+        out.push(`${freqs[i].toFixed(0).padEnd(8)} ${Zs[i].toFixed(1).padEnd(12)} ${Zpred[i].toFixed(1)}`);
+      }
+      out.push("");
+      out.push("=== Length Estimates ===");
+      out.push(`From Rdc (~#12 Cu): ${len_R.toFixed(0)} ft (${(len_R/5280).toFixed(2)} miles)`);
+      out.push(`From C (using ${userC_nF} nF/ft): ${len_C.toFixed(0)} ft (${(len_C/5280).toFixed(2)} miles)`);
+
+      if (knownLen > 0) {
+        const C_per_ft_fit_nF = (C/knownLen)*1e9;
+        const R_per_ft_fit = Rdc/knownLen;
+        out.push("");
+        out.push("=== With Known Length ===");
+        out.push(`Known length: ${knownLen.toFixed(0)} ft`);
+        out.push(`Fitted C per ft: ${C_per_ft_fit_nF.toFixed(4)} nF/ft`);
+        out.push(`Fitted R per ft: ${R_per_ft_fit.toFixed(6)} Ω/ft`);
+      }
+
+      // send back the text result
+      sourceWindow.postMessage({type:'result', data: out.join('\n')}, sourceOrigin);
+    } catch (err) {
+      sourceWindow.postMessage({type:'error', data: String(err)}, sourceOrigin);
+    }
+  }
+
+  // listen for parent
+  window.addEventListener('message', function(ev){
+    // security: accept only same origin
+    if(ev.origin !== window.location.origin) {
+      // ignore messages from other origins
+      return;
+    }
+    const msg = ev.data;
+    if(!msg || msg.type !== 'compute') return;
+    // message data contains: freqs, Zs, userC, knownLen
+    handleCompute(msg.data, ev.origin, ev.source);
+  }, false);
+
+  // optional: notify parent that calc is ready
+  if(window.parent && window.parent !== window) {
+    window.parent.postMessage({type:'ready'}, window.location.origin);
+  }
+</script>
+</body>
+</html>
