@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TXCalc UI (parent)</title>
+  <style>
+    body{font-family:Arial;margin:12px}
+    .block{margin-bottom:12px;padding:8px;border:1px solid #ddd;border-radius:6px;background:#fafafa}
+    label{display:block;margin-top:6px}
+    input,select{width:100%;padding:6px;margin-top:4px;box-sizing:border-box}
+    button{padding:10px 12px;margin:6px 6px 0 0;background:#007cba;color:#fff;border:none;border-radius:6px}
+    pre{white-space:pre-wrap;background:#fff;border:1px solid #ccc;padding:8px;overflow:auto}
+    /* hide iframe */
+    #calcFrame{display:none}
+  </style>
+</head>
+<body>
+  <h2>TXCalc UI</h2>
+  <div class="block">
+    <label>Freq1 (Hz)</label>
+    <input id="f1" value="512"><select onchange="f1.value=this.value">
+      <option></option><option>220</option><option>512</option><option>940</option><option>4096</option><option>8102</option><option>32768</option><option>65536</option><option>83100</option><option>131072</option><option>200100</option>
+    </select>
+    <label>|Z| meas (Ω, optional)</label><input id="z1">
+    <label>V1 (V)</label><input id="v1" value="30">
+    <label>I1 (mA)</label><input id="i1">
+  </div>
+
+  <div class="block">
+    <label>Freq2 (Hz)</label>
+    <input id="f2" value="8192"><select onchange="f2.value=this.value">
+      <option></option><option>220</option><option>512</option><option>940</option><option>4096</option><option>8102</option><option>32768</option><option>65536</option><option>83100</option><option>131072</option><option>200100</option>
+    </select>
+    <label>|Z| meas (Ω, optional)</label><input id="z2">
+    <label>V2 (V)</label><input id="v2" value="30">
+    <label>I2 (mA)</label><input id="i2">
+  </div>
+
+  <div class="block">
+    <label>Freq3 (Hz)</label>
+    <input id="f3" value="32768"><select onchange="f3.value=this.value">
+      <option></option><option>220</option><option>512</option><option>940</option><option>4096</option><option>8102</option><option>32768</option><option>65536</option><option>83100</option><option>131072</option><option>200100</option>
+    </select>
+    <label>|Z| meas (Ω, optional)</label><input id="z3">
+    <label>V3 (V)</label><input id="v3" value="30">
+    <label>I3 (mA)</label><input id="i3">
+  </div>
+
+  <div class="block">
+    <label>Capacitance per ft (nF/ft)</label><input id="cperft" value="0.07">
+    <label>Known length (ft, optional)</label><input id="lenft">
+  </div>
+
+  <button id="computeBtn">Compute (via calc.html)</button>
+  <button id="clearBtn">Clear</button>
+  <button id="copyBtn">Copy Results</button>
+
+  <h3>Results</h3>
+  <pre id="output">No results yet. Press Compute.</pre>
+
+  <!-- Hidden iframe hosting the calculator page (same-origin) -->
+  <iframe id="calcFrame" src="calc.html" title="calculator"></iframe>
+
+  <script>
+    // prefer same origin
+    const iframe = document.getElementById('calcFrame');
+    const output = document.getElementById('output');
+
+    // build payload from UI, prefer |Z| if present
+    function gatherInputs(){
+      const freqs = [];
+      const Zs = [];
+      for(let i=1;i<=3;i++){
+        const f = parseFloat(document.getElementById('f'+i).value);
+        const z = document.getElementById('z'+i).value.trim();
+        const v = document.getElementById('v'+i).value.trim();
+        const im = document.getElementById('i'+i).value.trim();
+        freqs.push(f || 0);
+        if(z!=='') Zs.push(parseFloat(z));
+        else if(v!=='' && im!=='') Zs.push(parseFloat(v)/(parseFloat(im)/1000.0));
+        else Zs.push(null); // will be validated by calc.html
+      }
+      const userC = parseFloat(document.getElementById('cperft').value) || 0.07;
+      const knownLen = parseFloat(document.getElementById('lenft').value) || 0;
+      return { freqs, Zs, userC, knownLen };
+    }
+
+    // send compute request
+    document.getElementById('computeBtn').addEventListener('click', ()=> {
+      const payload = gatherInputs();
+      // basic validation
+      for(let i=0;i<3;i++){
+        if(!payload.freqs[i] || payload.Zs[i]===null){
+          alert('Fill frequency and either |Z| or V+I for each test row.');
+          return;
+        }
+      }
+      // postMessage to iframe, use same origin for safety (window.location.origin)
+      iframe.contentWindow.postMessage({type:'compute', data: payload}, window.location.origin);
+      output.textContent = 'Calculating...';
+    });
+
+    // receive result messages from calc.html
+    window.addEventListener('message', (ev)=>{
+      // security: accept only same origin
+      if(ev.origin !== window.location.origin) return;
+      const msg = ev.data;
+      if(!msg || !msg.type) return;
+      if(msg.type === 'result'){
+        // msg.data is plain text (formatted output)
+        output.textContent = msg.data;
+      } else if(msg.type === 'error') {
+        output.textContent = 'Error from calc: ' + msg.data;
+      }
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', ()=>{
+      ['f1','v1','i1','z1','f2','v2','i2','z2','f3','v3','i3','z3','cperft','lenft'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(!el) return;
+        if(id==='f1') el.value='512';
+        else if(id==='f2') el.value='8192';
+        else if(id==='f3') el.value='32768';
+        else if(id==='v1' || id==='v2' || id==='v3') el.value='30';
+        else el.value='';
+      });
+      output.textContent = 'Cleared.';
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', ()=>{
+      navigator.clipboard.writeText(output.textContent).then(()=>alert('Copied'));
+    });
+  </script>
+</body>
+</html>
