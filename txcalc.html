@@ -43,7 +43,8 @@
 <body>
   <h2>emf transmitter calculator</h2>
 
-  <div class="input-row">
+  <!-- Frequency 1 set -->
+<div class="input-row">
   <label>Freq1 (Hz):</label>
   <input id="f1" value="512">
   <select onchange="document.getElementById('f1').value=this.value">
@@ -59,8 +60,13 @@
     <option value="131072">131072</option>
     <option value="200100">200100</option>
   </select>
+  <label style="margin-left:15px;">V1 (V):</label>
+  <input id="v1" value="30">
+  <label style="margin-left:15px;">I1 (mA):</label>
+  <input id="i1">
 </div>
 
+<!-- Frequency 2 set -->
 <div class="input-row">
   <label>Freq2 (Hz):</label>
   <input id="f2" value="8192">
@@ -77,8 +83,13 @@
     <option value="131072">131072</option>
     <option value="200100">200100</option>
   </select>
+  <label style="margin-left:15px;">V2 (V):</label>
+  <input id="v2" value="30">
+  <label style="margin-left:15px;">I2 (mA):</label>
+  <input id="i2">
 </div>
 
+<!-- Frequency 3 set -->
 <div class="input-row">
   <label>Freq3 (Hz):</label>
   <input id="f3" value="32768">
@@ -95,6 +106,10 @@
     <option value="131072">131072</option>
     <option value="200100">200100</option>
   </select>
+  <label style="margin-left:15px;">V3 (V):</label>
+  <input id="v3" value="30">
+  <label style="margin-left:15px;">I3 (mA):</label>
+  <input id="i3">
 </div>
 
   <div class="input-row"><label>Capacitance per ft (nF/ft):</label><input id="cperft" value="0.055"></div>
