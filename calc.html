@@ -5,17 +5,7 @@
   <title>TXCalc Engine</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
-<body>
-  <p>This page is not meant to be opened directly.</p>
-  <script>
-    document.body.style.display = "none"; // hide content
-    // Only expose calculation via postMessage
-    window.addEventListener("message", ev => {
-      if(ev.origin !== window.location.origin) return;
-      // ... perform calculation and post back
-    });
-  </script>
-</body>
+
 <body>
 <script>
   // Basic model functions (same as before). Keep this file separate so you can obfuscate it later.
