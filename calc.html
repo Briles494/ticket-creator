@@ -5,10 +5,9 @@
   <title>TXCalc Engine</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
-
 <body>
 <script>
-  // Basic model functions (same as before). Keep this file separate so you can obfuscate it later.
+  // Basic model functions
   function modelComponents(f, Rdc, k, C) {
     const w = 2 * Math.PI * f;
     const R_eff = Rdc + k * Math.sqrt(f);
@@ -51,31 +50,24 @@
     return {best, bestPred, bestErr};
   }
 
-  // compute handler: builds output string and posts back
   function handleCompute(data, sourceOrigin, sourceWindow) {
-  try {
-    const freqs = data.freqs;
-    const Zs = data.Zs;
-    let userC_nF = data.userC;
-    let knownLen = data.knownLen || 0;
+    try {
+      const freqs = data.freqs;
+      let Zs = data.Zs;
 
-    // --- New safety patch ---
-    for (let i = 0; i < Zs.length; i++) {
-      if (Zs[i] === 0) Zs[i] = 0.01;
-    }
-    if (userC_nF === 0) userC_nF = 0.01;
-    if (knownLen === 0) knownLen = 0.01;
-    // ------------------------
+      // --- Safety guard: if user gives 0 for V, mA, or Ω, force to 0.01 ---
+      Zs = Zs.map(val => (val === 0 ? 0.01 : val));
 
-    // run fit
-    const res = fitParams(freqs, Zs);
-    const [Rdc, k, C] = res.best;
-    const Zpred = res.bestPred;
+      let userC_nF = data.userC;
+      let knownLen = data.knownLen || 0;
 
-    const user_C_per_ft = userC_nF * 1e-9;
-    const len_C = (user_C_per_ft > 0) ? C / user_C_per_ft : 0;
+      const res = fitParams(freqs, Zs);
+      const [Rdc,k,C] = res.best;
+      const Zpred = res.bestPred;
 
-      // build text result
+      const user_C_per_ft = userC_nF * 1e-9;
+      const len_C = (user_C_per_ft>0) ? C / user_C_per_ft : 0;
+
       let out = [];
       out.push("=== RC + Skin Fit ===");
       out.push(`R_dc ≈ ${Rdc.toFixed(1)} Ω`);
@@ -87,10 +79,11 @@
       out.push("Freq(Hz) |Z meas (Ω) |Z pred (Ω)");
       out.push("----------------------------------");
       for (let i=0;i<freqs.length;i++){
-        out.push(`${freqs[i].toFixed(0).padEnd(8)} ${Zs[i].toFixed(1).padEnd(12)} ${Zpred[i].toFixed(1)}`);
+        out.push(`${freqs[i].toFixed(0).padEnd(8)} ${Zs[i].toFixed(2).padEnd(12)} ${Zpred[i].toFixed(2)}`);
       }
       out.push("");
-      out.push("=== Length Estimate ===");
+      out.push("=== Length Estimates ===");
+      // Removed the #12 Cu line
       out.push(`From C (using ${userC_nF} nF/ft): ${len_C.toFixed(0)} ft (${(len_C/5280).toFixed(2)} miles)`);
 
       if (knownLen > 0) {
@@ -103,27 +96,19 @@
         out.push(`Fitted R per ft: ${R_per_ft_fit.toFixed(6)} Ω/ft`);
       }
 
-      // send back the text result
       sourceWindow.postMessage({type:'result', data: out.join('\n')}, sourceOrigin);
     } catch (err) {
       sourceWindow.postMessage({type:'error', data: String(err)}, sourceOrigin);
     }
   }
 
-  // listen for parent
   window.addEventListener('message', function(ev){
-    // security: accept only same origin
-    if(ev.origin !== window.location.origin) {
-      // ignore messages from other origins
-      return;
-    }
+    if(ev.origin !== window.location.origin) return;
     const msg = ev.data;
     if(!msg || msg.type !== 'compute') return;
-    // message data contains: freqs, Zs, userC, knownLen
     handleCompute(msg.data, ev.origin, ev.source);
   }, false);
 
-  // optional: notify parent that calc is ready
   if(window.parent && window.parent !== window) {
     window.parent.postMessage({type:'ready'}, window.location.origin);
   }
