@@ -151,27 +151,35 @@
         }
 
         .summary-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
         }
 
         .stat-box {
             background: #f7fafc;
-            padding: 10px;
+            padding: 6px 10px;
             border-radius: 6px;
             text-align: center;
+            flex: 1;
+            min-width: 70px;
+        }
+
+        .due-date-mini {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
         }
 
         .stat-value {
-            font-size: 1.4em;
+            font-size: 1.2em;
             font-weight: bold;
             color: #667eea;
         }
 
         .stat-label {
-            font-size: 0.85em;
+            font-size: 0.8em;
             color: #666;
             margin-top: 2px;
         }
@@ -218,8 +226,8 @@
         }
 
         .lines-list {
-            margin-top: 15px;
-            max-height: 200px;
+            margin-top: 10px;
+            max-height: 180px;
             overflow-y: auto;
         }
 
@@ -227,11 +235,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px;
-            margin: 5px 0;
+            padding: 6px 8px;
+            margin: 4px 0;
             background: #f7fafc;
-            border-radius: 6px;
-            border-left: 4px solid #667eea;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+            font-size: 0.9em;
         }
 
         .line-item.low-score {
@@ -263,10 +272,27 @@
         .score-poor { background: #fed7d7; color: #c53030; }
 
         .ticket-map {
-            height: 250px;
-            margin: 15px;
+            height: 150px;
+            margin: 10px;
             border-radius: 8px;
             overflow: hidden;
+        }
+
+        .map-controls {
+            padding: 8px 10px;
+            background: #f7fafc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .color-mode-select {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85em;
+            cursor: pointer;
         }
 
         .low-score-alert {
@@ -463,6 +489,43 @@
             'Unknown': '#808080'
         };
 
+        // Signal score colors (matching index.html)
+        function getSignalScoreColor(score) {
+            if (score >= 95) return '#006400'; // Dark Green
+            if (score >= 90) return '#228B22'; // Forest Green
+            if (score >= 85) return '#32CD32'; // Lime Green
+            if (score >= 80) return '#7CFC00'; // Lawn Green
+            if (score >= 75) return '#ADFF2F'; // Green Yellow
+            if (score >= 70) return '#FFFF00'; // Yellow
+            if (score >= 65) return '#FFD700'; // Gold
+            if (score >= 60) return '#FFA500'; // Orange
+            if (score >= 55) return '#FF8C00'; // Dark Orange
+            if (score >= 50) return '#FF6347'; // Tomato
+            if (score >= 45) return '#FF4500'; // Orange Red
+            if (score >= 40) return '#DC143C'; // Crimson
+            return '#8B0000'; // Dark Red
+        }
+
+        // Assurance score colors (matching index.html)
+        function getAssuranceScoreColor(score) {
+            if (score >= 95) return '#000080'; // Navy
+            if (score >= 90) return '#0000CD'; // Medium Blue
+            if (score >= 85) return '#0000FF'; // Blue
+            if (score >= 80) return '#1E90FF'; // Dodger Blue
+            if (score >= 75) return '#00BFFF'; // Deep Sky Blue
+            if (score >= 70) return '#87CEEB'; // Sky Blue
+            if (score >= 65) return '#B0C4DE'; // Light Steel Blue
+            if (score >= 60) return '#D8BFD8'; // Thistle
+            if (score >= 55) return '#DDA0DD'; // Plum
+            if (score >= 50) return '#DA70D6'; // Orchid
+            if (score >= 45) return '#BA55D3'; // Medium Orchid
+            if (score >= 40) return '#9370DB'; // Medium Purple
+            return '#8B008B'; // Dark Magenta
+        }
+
+        // Track current line color mode per ticket
+        let ticketColorModes = {};
+
         // Load tickets when page loads
         document.addEventListener('DOMContentLoaded', function() {
             loadTickets();
@@ -512,6 +575,9 @@
                 const statusClass = props.status ? props.status.toLowerCase().replace(' ', '-') : 'unknown';
                 const ticketId = props.ticket_id;
 
+                // Load ticket metadata for accurate totals
+                const metadata = await loadTicketMetadata(ticketId);
+
                 // Load lines data for this ticket
                 const linesData = await loadTicketLines(ticketId);
 
@@ -521,14 +587,21 @@
                 let lowScoreAlert = '';
                 let lowScoreLines = [];
 
-                if (linesData && linesData.lines && linesData.lines.length > 0) {
+                // Use metadata if available, fallback to calculating from lines
+                if (metadata) {
+                    totalLines = metadata.total_lines || 0;
+                    totalFootage = metadata.total_length_ft || 0;
+                } else if (linesData && linesData.lines && linesData.lines.length > 0) {
                     totalLines = linesData.count;
                     totalFootage = linesData.lines.reduce((sum, line) => sum + line.length_ft, 0);
+                }
 
-                    // Generate lines list
+                if (linesData && linesData.lines && linesData.lines.length > 0) {
+                    // Generate lines list with enhanced data
                     linesHTML = '<div class="lines-list">';
                     linesData.lines.forEach(line => {
                         const avgScore = line.average_assurance_score || 0;
+                        const signalScore = line.average_signal_score || 0;
                         const scoreClass = getScoreClass(avgScore);
                         const isLowScore = avgScore > 0 && avgScore < 60;
 
@@ -538,10 +611,18 @@
 
                         linesHTML += `
                             <div class="line-item ${isLowScore ? 'low-score' : ''}">
-                                <span class="line-name">${line.line_name}</span>
-                                <div class="line-stats">
-                                    <span>${line.length_ft.toFixed(0)} ft</span>
-                                    ${avgScore > 0 ? `<span class="score-badge ${scoreClass}">${avgScore.toFixed(1)}</span>` : ''}
+                                <div style="flex: 1;">
+                                    <div class="line-name">${line.line_name}</div>
+                                    <div style="font-size: 0.75em; color: #666; margin-top: 2px;">
+                                        ${line.utility_type || 'Unknown'} | ${line.point_count || 0} pts
+                                    </div>
+                                </div>
+                                <div class="line-stats" style="text-align: right;">
+                                    <div>${line.length_ft.toFixed(0)} ft</div>
+                                    <div style="display: flex; gap: 4px; margin-top: 2px;">
+                                        ${avgScore > 0 ? `<span class="score-badge ${scoreClass}" title="Assurance Score">${avgScore.toFixed(1)}</span>` : ''}
+                                        ${signalScore > 0 ? `<span style="font-size: 0.7em; color: #666;" title="Signal Score">S:${signalScore.toFixed(0)}</span>` : ''}
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -576,9 +657,10 @@
                                 </div>
                                 <div class="stat-box">
                                     <div class="stat-value">${totalFootage.toFixed(0)}</div>
-                                    <div class="stat-label">Total Feet</div>
+                                    <div class="stat-label">Feet</div>
                                 </div>
                             </div>
+                            ${props.due_date ? `<div class="due-date-mini">📅 Due: ${formatDate(props.due_date)}</div>` : ''}
                         </div>
 
                         ${lowScoreAlert}
@@ -606,6 +688,14 @@
 
                                 ${linesHTML}
 
+                                <div class="map-controls">
+                                    <label style="font-size: 0.85em; color: #666;">Line Colors:</label>
+                                    <select class="color-mode-select" id="colorMode-${ticketId}" onchange="changeTicketColorMode('${ticketId}')">
+                                        <option value="utility">Utility Type</option>
+                                        <option value="signal">Signal Score</option>
+                                        <option value="assurance">Assurance Score</option>
+                                    </select>
+                                </div>
                                 <div class="ticket-map" id="map-${ticketId}"></div>
                             </div>
 
@@ -674,32 +764,70 @@
             // Load and display lines
             const linesData = await loadTicketLines(ticketId);
             if (linesData && linesData.lines) {
-                linesData.lines.forEach(line => {
-                    const wkt = line.geometry;
-                    const coordsMatch = wkt.match(/LINESTRING\((.+)\)/);
-                    if (coordsMatch) {
-                        const coordPairs = coordsMatch[1].split(',');
-                        const coordinates = coordPairs.map(pair => {
-                            const [lon, lat] = pair.trim().split(' ').map(Number);
-                            return [lat, lon];
-                        });
+                // Store lines data for color mode changes
+                ticketMaps[ticketId] = { map, polygon, linesData };
+                ticketColorModes[ticketId] = 'utility'; // default mode
 
-                        if (coordinates.length >= 2) {
-                            const color = line.color_hex || utilityColors[line.utility_type] || '#808080';
-                            L.polyline(coordinates, {
-                                color: color,
-                                weight: 3,
-                                opacity: 0.8
-                            }).addTo(map);
-                        }
-                    }
-                });
+                renderTicketLines(ticketId);
+            } else {
+                ticketMaps[ticketId] = { map, polygon };
             }
 
             // Fit map to polygon bounds
-            map.fitBounds(polygon.getBounds(), { padding: [20, 20] });
+            map.fitBounds(polygon.getBounds(), { padding: [15, 15] });
+        }
 
-            ticketMaps[ticketId] = map;
+        function renderTicketLines(ticketId) {
+            const mapData = ticketMaps[ticketId];
+            if (!mapData || !mapData.linesData) return;
+
+            const { map, linesData } = mapData;
+            const colorMode = ticketColorModes[ticketId] || 'utility';
+
+            // Remove existing line layers if any
+            if (mapData.lineLayers) {
+                mapData.lineLayers.forEach(layer => map.removeLayer(layer));
+            }
+            mapData.lineLayers = [];
+
+            linesData.lines.forEach(line => {
+                const wkt = line.geometry;
+                const coordsMatch = wkt.match(/LINESTRING\((.+)\)/);
+                if (coordsMatch) {
+                    const coordPairs = coordsMatch[1].split(',');
+                    const coordinates = coordPairs.map(pair => {
+                        const [lon, lat] = pair.trim().split(' ').map(Number);
+                        return [lat, lon];
+                    });
+
+                    if (coordinates.length >= 2) {
+                        // Determine color based on mode
+                        let color;
+                        if (colorMode === 'signal' && line.average_signal_score !== null && line.average_signal_score !== undefined) {
+                            color = getSignalScoreColor(line.average_signal_score);
+                        } else if (colorMode === 'assurance' && line.average_assurance_score !== null && line.average_assurance_score !== undefined) {
+                            color = getAssuranceScoreColor(line.average_assurance_score);
+                        } else {
+                            // Utility type coloring (default)
+                            color = line.color_hex || utilityColors[line.utility_type] || '#808080';
+                        }
+
+                        const polyline = L.polyline(coordinates, {
+                            color: color,
+                            weight: 3,
+                            opacity: 0.8
+                        }).addTo(map);
+
+                        mapData.lineLayers.push(polyline);
+                    }
+                }
+            });
+        }
+
+        function changeTicketColorMode(ticketId) {
+            const select = document.getElementById(`colorMode-${ticketId}`);
+            ticketColorModes[ticketId] = select.value;
+            renderTicketLines(ticketId);
         }
 
         async function loadTicketLines(ticketId) {
@@ -709,6 +837,17 @@
                 return await response.json();
             } catch (error) {
                 console.error(`Error loading lines for ${ticketId}:`, error);
+                return null;
+            }
+        }
+
+        async function loadTicketMetadata(ticketId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/metadata`);
+                if (!response.ok) return null;
+                return await response.json();
+            } catch (error) {
+                console.error(`Error loading metadata for ${ticketId}:`, error);
                 return null;
             }
         }
@@ -816,7 +955,15 @@
         }
 
         async function refreshTickets() {
+            // Clean up existing maps
+            for (const ticketId in ticketMaps) {
+                const mapData = ticketMaps[ticketId];
+                if (mapData && mapData.map) {
+                    mapData.map.remove();
+                }
+            }
             ticketMaps = {};
+            ticketColorModes = {};
             await loadTickets();
         }
 
