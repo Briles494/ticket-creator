@@ -278,10 +278,16 @@
         .score-poor { background: #fed7d7; color: #c53030; }
 
         .ticket-map {
-            height: 150px;
+            height: 300px;
             margin: 10px;
             border-radius: 8px;
             overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+            .ticket-map {
+                height: 200px;
+            }
         }
 
         .map-controls {
