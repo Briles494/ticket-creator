@@ -293,6 +293,13 @@
             border-radius: 4px;
             font-size: 0.85em;
             cursor: pointer;
+            background: white;
+            min-width: 130px;
+        }
+
+        .color-mode-select:focus {
+            outline: 2px solid #667eea;
+            border-color: #667eea;
         }
 
         .low-score-alert {
@@ -683,16 +690,19 @@
 
             container.innerHTML = ticketCards.join('');
 
-            // Second pass: Load metadata for each ticket (throttled)
+            // Second pass: Load ONLY metadata for each ticket (throttled)
             for (const ticket of filteredTickets) {
-                await loadTicketCardData(ticket.properties.ticket_id);
-                await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay between tickets
+                await loadTicketMetadata_InitialLoad(ticket.properties.ticket_id);
+                await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay between tickets
             }
         }
 
-        async function loadTicketCardData(ticketId) {
+        // Track which tickets have had their details loaded
+        let ticketDetailsLoaded = {};
+
+        async function loadTicketMetadata_InitialLoad(ticketId) {
             try {
-                // Load metadata first (fast query)
+                // Load ONLY metadata (fast, minimal query)
                 const metadata = await loadTicketMetadata(ticketId);
 
                 let totalLines = 0;
@@ -718,6 +728,31 @@
                     `;
                 }
 
+            } catch (error) {
+                console.error(`Error loading metadata for ticket ${ticketId}:`, error);
+                // Update with error state
+                const statsContainer = document.getElementById(`stats-${ticketId}`);
+                if (statsContainer) {
+                    statsContainer.innerHTML = `
+                        <div class="stat-box">
+                            <div class="stat-value">-</div>
+                            <div class="stat-label">Lines</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">-</div>
+                            <div class="stat-label">Feet</div>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        async function loadTicketDetailsOnExpand(ticketId) {
+            // Only load once
+            if (ticketDetailsLoaded[ticketId]) return;
+            ticketDetailsLoaded[ticketId] = true;
+
+            try {
                 // Load detailed lines data
                 const linesData = await loadTicketLines(ticketId);
 
@@ -783,20 +818,10 @@
                 }
 
             } catch (error) {
-                console.error(`Error loading data for ticket ${ticketId}:`, error);
-                // Update with error state
-                const statsContainer = document.getElementById(`stats-${ticketId}`);
-                if (statsContainer) {
-                    statsContainer.innerHTML = `
-                        <div class="stat-box">
-                            <div class="stat-value">-</div>
-                            <div class="stat-label">Lines</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value">-</div>
-                            <div class="stat-label">Feet</div>
-                        </div>
-                    `;
+                console.error(`Error loading details for ticket ${ticketId}:`, error);
+                const linesContainer = document.getElementById(`lines-${ticketId}`);
+                if (linesContainer) {
+                    linesContainer.innerHTML = '<div style="text-align: center; padding: 15px; color: #f56565;">Failed to load line data</div>';
                 }
             }
         }
@@ -807,9 +832,15 @@
 
             card.classList.toggle('expanded');
 
-            // Initialize map if expanding for first time
-            if (!wasExpanded && !ticketMaps[ticketId]) {
-                setTimeout(() => initTicketMap(ticketId), 100);
+            // Load details and map only when expanding for first time
+            if (!wasExpanded) {
+                // Load line details if not already loaded
+                loadTicketDetailsOnExpand(ticketId);
+
+                // Initialize map if not already initialized
+                if (!ticketMaps[ticketId]) {
+                    setTimeout(() => initTicketMap(ticketId), 100);
+                }
             }
         }
 
@@ -1069,6 +1100,7 @@
             }
             ticketMaps = {};
             ticketColorModes = {};
+            ticketDetailsLoaded = {}; // Clear loaded details tracking
             await loadTickets();
         }
 
